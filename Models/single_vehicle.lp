@@ -19,7 +19,7 @@ Required_SOC: Power_0 + Power_1 + Power_10 + Power_11 + Power_12 + Power_13
  + Power_33 + Power_34 + Power_35 + Power_36 + Power_37 + Power_38 + Power_39
  + Power_4 + Power_40 + Power_41 + Power_42 + Power_43 + Power_44 + Power_45
  + Power_46 + Power_47 + Power_5 + Power_6 + Power_7 + Power_8 + Power_9
- = 25.3491345983
+ = 18.7724468508
 Bounds
 Power_0 <= 3.5
 Power_1 <= 3.5

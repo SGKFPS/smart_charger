@@ -8,6 +8,7 @@ import datetime as dt
 import glob
 import pickle
 import global_variables as gv
+import functions as f
 from global_variables import NUM_VEHICLES
 
 def prep_data(path):
@@ -75,18 +76,19 @@ all_journeys = prep_data(gv.data_path)
 prototype_week = get_weeks_data(all_journeys, gv.PROTOTYPE_DAYS[0], gv.TIME_RANGE)
 test_week = get_weeks_data(all_journeys, gv.TEST_DAYS[0], gv.TIME_RANGE)
 price_data = clean_pricing(gv.pricing_path)
+charging_profile = f.dumb_charging(prototype_week, price_data)
 
 # Pickle
-
+pickle.dump(all_journeys,open('Data/all_journeys','wb'))
 pickle.dump(prototype_week,open('Data/prototype_week','wb'))
 pickle.dump(test_week,open('Data/test_week','wb'))
 pickle.dump(price_data,open('Data/price_data','wb'))
+pickle.dump(charging_profile,open('Data/BAU_profile','wb'))
 
+#print(prototype_week.head())
 
+print('Start time range:' , 
+min(prototype_week['Start_Time_of_Route']), max(prototype_week['Start_Time_of_Route']))
 
-
-# print('Start time range:' , 
-# min(all_journeys['Start_Time_of_Route']), max(all_journeys['Start_Time_of_Route']))
-
-# print('End time range:' , 
-# min(all_journeys['End_Time_of_Route']), max(all_journeys['End_Time_of_Route']))
+print('End time range:' , 
+min(prototype_week['End_Time_of_Route']), max(prototype_week['End_Time_of_Route']))

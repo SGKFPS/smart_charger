@@ -1,31 +1,31 @@
-%% Updated on (06/04/20)
+%% Updated on (07/09/20)
 %%% Script that allocates vehicle to journeys with charging options both at day and
 %%% night
 
 %% Directories
-savedir1 = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\';
-allCasesVerticalOutputdir = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
+savedir1 = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\';
+allCasesVerticalOutputdir = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
 
 %% (.mat) files name
-branch_idindex_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\branch_idindex_file_allCasesAllocCharging.mat';
-branch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\branch_id_file_allCasesAllocCharging.mat';
-sortbranch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\sortbranch_id_file_allCasesAllocCharging.mat';
-path_name_ev = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\ev_vansNum_test.mat';
-path_name_diesel = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\diesel_vansNum_test.mat';
+branch_idindex_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\branch_idindex_file_allCasesAllocCharging.mat';
+branch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\branch_id_file_allCasesAllocCharging.mat';
+sortbranch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\sortbranch_id_file_allCasesAllocCharging.mat';
+path_name_ev = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\ev_vansNum_test.mat';
+path_name_diesel = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\diesel_vansNum_test.mat';
 
 %% inputs
 initial_SoC = 1;
-charger_rating = [3.3,6.3,9.9,45];
+charger_rating = [11,45];%[3.3,6.3,9.9,45];
 
 journey_safety_margin = 0;
-inputsMatrix = [41.4,41,55,60,82.5;0.563,0.717,0.738,0.604,0.664;74.1,57.17,74.56,99.4,124.3;583,944,846,1932.5,846; 52,72,72,107,129];
+inputsMatrix = [75;0.46;164;1000; 80];
 refrigeratorPowerConsumption = 0.5;
 year_chosen = 2019;
 matrixSize = size(inputsMatrix,2);
 
 tic
 
- data = readtable('cleaned_route_data_all_11022020.csv');
+ data = readtable('select_journey_data.csv');
     journeysall = sortrows(data,'Branch_ID');
     journeysall = journeysall(year(journeysall.Start_Date_of_Route)==year_chosen,:);
 
@@ -292,7 +292,7 @@ simjAll = [];
                    for j=1:numberOfJourneysE
                 
                         rownumSTold = rownumST;
-                        start_tt = datevec(string_time_st(j));
+                        start_tt = datevec(cellstr(string_time_st(j)));
                         change_timeST = round(2*(start_tt(4) + (start_tt(5))/60));
                     timeST = change_timeST;
                     dateSTindex = find(dates_new==datenum(journeysE.Start_Date_of_Route(j)))-1;
@@ -308,7 +308,7 @@ simjAll = [];
                     
                 end
                 
-                end_tt = datevec(string_time_end(j));
+                end_tt = datevec(cellstr(string_time_end(j)));
                 change_timeEND = round(2*(end_tt(4) + (end_tt(5))/60));
                 timeEND = change_timeEND;
                 rownumEND = dateSTindex*48+timeEND+1;
@@ -497,7 +497,7 @@ simjAll = [];
     end     
 %   
   %% Save output files in folders
-cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\'
+cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\'
 
 %%-------------- EV80 ---------------------
 % copyfile *95.94_* ev80/.
@@ -530,9 +530,9 @@ cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev
 % %%-----------------------------------------------------
 
 % %%-------------- eSprinter Hi 3.9T -------------------------------
-copyfile *74.56_* eSprinterHi39TRange/.
-copyfile *74.56_newstoreD_* eSprinterHi39TRange_storeD/.
-copyfile *74.56_newstoreE_* eSprinterHi39TRange_storeE/.
+%copyfile *74.56_* eSprinterHi39TRange/.
+%copyfile *74.56_newstoreD_* eSprinterHi39TRange_storeD/.
+%copyfile *74.56_newstoreE_* eSprinterHi39TRange_storeE/.
 % %%-----------------------------------------------------
 % 
 % %%--------------- T4 --------------------------------
@@ -545,6 +545,12 @@ copyfile *74.56_newstoreE_* eSprinterHi39TRange_storeE/.
 % copyfile *124.3_* T4/.
 % copyfile *124.3_newstoreD_* T4_storeD/.
 % copyfile *124.3_newstoreE_* T4_storeE/.
+%%--------------------------------------------
+
+%--------------- Vivaro --------------------------------
+copyfile *164_* Vivaro/.
+copyfile *164_newstoreD_* Vivaro_storeD/.
+copyfile *164_newstoreE_* Vivaro_storeE/.
 %%--------------------------------------------
 
 %%-----------------------------------------------
@@ -565,7 +571,7 @@ copyfile *74.56_newstoreE_* eSprinterHi39TRange_storeE/.
 %%-------------------------------------------------------------
 
 %% Save charging output files (vertical concatenation)
-cd 'F:\20200323Matlab Runs\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
+cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Smart charging\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200904\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
 copyfile *new_allCasesVerticalOutputFile* allCasesChargingVerticalOutputs/.
 
 toc
