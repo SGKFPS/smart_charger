@@ -1,6 +1,6 @@
 # First approach to Smart Charging Phase 1 using PuLP - single vehicle
 # Modeled as a PuLP optimisation blending problem
-# Started 20 Aug 2020
+# Started 02/09 2020
 # Author: Sofia Taylor, Flexible Power Systems
 
 import numpy as np
