@@ -11,24 +11,18 @@ import global_variables as gv
 import functions as f
 from global_variables import NUM_VEHICLES
 
+# FIXME leave full datetime for Start/End times
 def prep_data(path):
     all_files = glob.glob(path)
-    import_cols = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
-                'End_Time_of_Route', 'Planned_total_Mileage'] #FIXME add to gv
 
-    journeys = pd.concat((pd.read_csv(f,usecols=import_cols) for f in all_files))
+    journeys = pd.concat((pd.read_csv(f,usecols=gv.IMPORT_COLS) for f in all_files))
     journeys['Start_Time_of_Route']=pd.to_datetime(journeys['Start_Time_of_Route'])
     journeys['date'] = journeys['Start_Time_of_Route'].dt.date
     journeys = limit_vehicles(journeys)
-    journeys['Start_Time_of_Route'] = journeys['Start_Time_of_Route'].dt.time
+    #journeys['Start_Time_of_Route'] = journeys['Start_Time_of_Route'].dt.time
     journeys['End_Time_of_Route']=pd.to_datetime(journeys['End_Time_of_Route'])
-    journeys['End_Time_of_Route'] = journeys['End_Time_of_Route'].dt.time
+    #journeys['End_Time_of_Route'] = journeys['End_Time_of_Route'].dt.time
 
-    # Calculate journey requirements and add randomness
-    journeys['Required_SOC'] = journeys['Planned_total_Mileage']*gv.POWER_KM*(1
-                                + gv.REFR_RATIO 
-                                + gv.RANDOM_SOC_RATIO* np.random.uniform(size=
-                                journeys.shape[0]))
     journeys.set_index(['date','Vehicle_ID'],inplace=True)
     return journeys
 
@@ -76,16 +70,24 @@ all_journeys = prep_data(gv.data_path)
 prototype_week = get_weeks_data(all_journeys, gv.PROTOTYPE_DAYS[0], gv.TIME_RANGE)
 test_week = get_weeks_data(all_journeys, gv.TEST_DAYS[0], gv.TIME_RANGE)
 price_data = clean_pricing(gv.pricing_path)
-charging_profile = f.dumb_charging(prototype_week, price_data)
+BAU_profile = f.BAU_charging(prototype_week, price_data)
+BAU_profile_test = f.BAU_charging(test_week, price_data)
+
+
+# # Plot BAU
+# plot = BAU_profile.plot(x='from', y='Site_output', kind='line')
+# fig = plot.get_figure()
+# fig.savefig('Data/BAU_profile_output.png')
 
 # Pickle
 pickle.dump(all_journeys,open('Data/all_journeys','wb'))
 pickle.dump(prototype_week,open('Data/prototype_week','wb'))
 pickle.dump(test_week,open('Data/test_week','wb'))
-pickle.dump(price_data,open('Data/price_data','wb'))
-pickle.dump(charging_profile,open('Data/BAU_profile','wb'))
+#pickle.dump(price_data,open('Data/price_data','wb'))
+pickle.dump(BAU_profile,open('Data/BAU_profile','wb'))
+pickle.dump(BAU_profile_test,open('Data/BAU_profile_test','wb'))
 
-#print(prototype_week.head())
+print(BAU_profile.head())
 
 print('Start time range:' , 
 min(prototype_week['Start_Time_of_Route']), max(prototype_week['Start_Time_of_Route']))

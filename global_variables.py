@@ -4,19 +4,24 @@
 import datetime as dt
 
 NUM_VEHICLES = 10
-NUM_CHARGERS = 10
+NUM_CHARGERS = NUM_VEHICLES
 RANDOM_SOC_RATIO = 0.2 # randomness introduced into the journey state of charge reqs
 REFR_RATIO = 0.25 #ratio of exta energy use for refrigeration (kWh/km)
 POWER_KM = 0.29 # kWh / mile
 TIME_RANGE = dt.timedelta(weeks=1, days=1)
 PROTOTYPE_DAYS = [dt.date(2019,2,10), dt.date(2019,6,22), dt.date(2019,10,19)]
 TEST_DAYS = [dt.date(2019,2,17), dt.date(2019,6,29), dt.date(2019,10,26)]
+DAY = dt.datetime(2019,2,10)
 CHARGER_POWER = 7 # kW
+CHARGER_EFF = 0.9
 BATTERY_CAPACITY = 75 #kWh
+SITE_CAPACITY = 20 # kWh (in a half-hour period so eq. 50 kW)
 CHAR_ST = dt.time(11, 0,0) # 11 am is start of charging period each day #FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=11)
 TIME_INT = dt.timedelta(minutes = 30)
 DAY_INTERVALS = 48
+IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
+                'End_Time_of_Route', 'Energy_Required'] #FIXME add to gv
 
 data_path = r"Data/JPL_allocation/Vivaro/*.csv"
 pricing_path = r"Data/Octopus Agile Rates_2019_LON.csv"

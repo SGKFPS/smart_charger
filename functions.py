@@ -13,13 +13,12 @@ def create_empty_schedule(journeys, eprice):
     # Create dataframe with pricing data for that range
     range_mask = ((eprice['from'] >= start_range) & 
                     (eprice['from'] < end_range))
-    charging_profile = eprice[range_mask]
+    charging_profile = eprice[range_mask].copy()
     charging_profile.reset_index(inplace=True, drop=True)
+    charging_profile.drop(columns=['to'], inplace=True)
     return charging_profile, [start_range, end_range]
 
 def dumb_charging(journeys, eprice):
-    # In 100% charge mode, every night we recharge the 'Required_SOC' of that day
-    journeys['Time_to_charge'] = journeys['Required_SOC'] / gv.CHARGER_POWER
     # Create df for charge profile, with time slots in that time range. 
     empty_profile, time_range = create_empty_schedule(journeys, eprice)
     # Iterate over each day
@@ -38,13 +37,15 @@ def dumb_charging(journeys, eprice):
                 on = 'from'
             )
     profiles = pd.concat(list(day_profile.values()))
+    profiles['Site_output'] = profiles[gv.Power_output.values()].sum(axis=1)
+    profiles['Electricity_costs'] = profiles['Site_output'] * profiles['unit_rate_excl_vat']
     return profiles
 
 # Create function for one vehicle, in one day
 def single_BAU_schedule(journeys, day, vehicle, eprice):
     return_time = journeys.loc[(day, vehicle),'End_Time_of_Route']
     return_datetime = dt.datetime.combine(day, return_time)
-    required_charge = journeys.loc[(day, vehicle),'Required_SOC']
+    required_charge = journeys.loc[(day, vehicle),'Energy_Required']
     depart_time = journeys.loc[(day + dt.timedelta(days=1), vehicle),'Start_Time_of_Route']
     depart_datetime = dt.datetime.combine(day + dt.timedelta(days=1), depart_time)
     #print(depart_datetime)
@@ -55,6 +56,7 @@ def single_BAU_schedule(journeys, day, vehicle, eprice):
     timesidx = single_profile.index
     single_profile[gv.Power_output[vehicle]] = 0
     single_profile[gv.SOC[vehicle]] = gv.BATTERY_CAPACITY - required_charge
+    prev_idx = timesidx[0]
     for idx in timesidx:
         if single_profile.loc[idx,'from'] + gv.TIME_INT <= return_datetime:
             single_profile.loc[idx,gv.Power_output[vehicle]] = 0
@@ -76,3 +78,69 @@ def create_timelist(): #FIXME so that it's always a numpy array
     for i in range(intervals):
         time_array[i] += gv.TIME_INT * i
     return np.asarray(time_array)
+
+# Create a function to get daily data
+def get_daily_data(journeys,day):
+    daily_df = journeys.loc[(day)][['End_Time_of_Route','Energy_Required']]
+    daily_df['Start_next_route'] = journeys.loc[(day+dt.timedelta(days=1))]['Start_Time_of_Route']
+    return daily_df
+
+# Create function for one vehicle, in one day
+def singleveh_BAU_schedule(journeys, day, vehicle, eprice):
+    # return_time = journeys.loc[(day, vehicle),'End_Time_of_Route']
+    # return_datetime = dt.datetime.combine(day, return_time)
+    return_datetime = journeys.loc[(day, vehicle),'End_Time_of_Route']
+    required_charge = journeys.loc[(day, vehicle),'Energy_Required']
+    # depart_time = journeys.loc[(day + dt.timedelta(days=1), vehicle),'Start_Time_of_Route']
+    # depart_datetime = dt.datetime.combine(day + dt.timedelta(days=1), depart_time)
+    #print(depart_datetime)
+    #print('Return:', return_datetime, "\nDepart:", depart_datetime, '\nRequired charge:', required_charge)
+    mask = ( (eprice['from'] >= dt.datetime.combine(day, gv.CHAR_ST)) 
+    & (eprice['from'] < dt.datetime.combine(day + dt.timedelta(days=1), gv.CHAR_ST)))
+    single_profile = eprice[mask][['from','unit_rate_excl_vat']].copy()
+    timesidx = single_profile.index
+    single_profile['Output_BAU'] = 0
+    single_profile['SOC_BAU'] = gv.BATTERY_CAPACITY - required_charge
+    prev_idx = timesidx[0]
+    for idx in timesidx:
+        if single_profile.loc[idx,'from']  <= return_datetime:
+            single_profile.loc[idx,'Output_BAU'] = 0
+        elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > gv.CHARGER_POWER/2:
+            single_profile.loc[idx,'Output_BAU'] = gv.CHARGER_POWER / 2 #FIXME generalise for any time interval
+        elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > 0:
+            single_profile.loc[idx,'Output_BAU'] = gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU']
+        single_profile.loc[idx,'SOC_BAU'] = gv.BATTERY_CAPACITY - required_charge + single_profile['Output_BAU'].sum() * gv.CHARGER_EFF
+        prev_idx = idx  
+    single_profile['Vehicle'] = vehicle    
+    return single_profile
+
+    # Create second BAU scheduling function that uses multi index
+
+def BAU_charging(journeys, eprice):
+    # Create df for charge profile, with time slots in that time range. 
+    _, time_range = create_empty_schedule(journeys, eprice)
+    # Iterate over each day
+    dates = journeys.index.unique(level='date')
+    print(dates)
+    day_profile = {}
+    for date in dates:
+        day = date.to_pydatetime()
+        if day.date() == time_range[1].date():
+            break
+        # Iterate over vehicles, copy to correct column
+        vehicle_profiles = {}
+        for vehicle in range(gv.NUM_VEHICLES):
+            vehicle_profiles[vehicle] = singleveh_BAU_schedule(journeys, day, vehicle, eprice)
+        day_profile[day] = pd.concat(list(vehicle_profiles.values()))
+    profiles = pd.concat(list(day_profile.values()))
+    profiles.sort_values(by=['from','Vehicle'],inplace=True)
+    profiles.set_index(['from','Vehicle'],inplace=True)
+    return profiles
+
+# Takes a single day from BAU
+def create_daily_schedule(journeys, day):
+    start_datetime = day + gv.CHAR_ST_DELTA
+    end_datetime = start_datetime + dt.timedelta(days=1)
+    day_profile = journeys[(journeys.index.get_level_values(0) < end_datetime)
+    & (journeys.index.get_level_values(0) >= start_datetime)][['Output_BAU','unit_rate_excl_vat']]
+    return day_profile
