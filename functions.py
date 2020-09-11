@@ -87,14 +87,8 @@ def get_daily_data(journeys,day):
 
 # Create function for one vehicle, in one day
 def singleveh_BAU_schedule(journeys, day, vehicle, eprice):
-    # return_time = journeys.loc[(day, vehicle),'End_Time_of_Route']
-    # return_datetime = dt.datetime.combine(day, return_time)
     return_datetime = journeys.loc[(day, vehicle),'End_Time_of_Route']
     required_charge = journeys.loc[(day, vehicle),'Energy_Required']
-    # depart_time = journeys.loc[(day + dt.timedelta(days=1), vehicle),'Start_Time_of_Route']
-    # depart_datetime = dt.datetime.combine(day + dt.timedelta(days=1), depart_time)
-    #print(depart_datetime)
-    #print('Return:', return_datetime, "\nDepart:", depart_datetime, '\nRequired charge:', required_charge)
     mask = ( (eprice['from'] >= dt.datetime.combine(day, gv.CHAR_ST)) 
     & (eprice['from'] < dt.datetime.combine(day + dt.timedelta(days=1), gv.CHAR_ST)))
     single_profile = eprice[mask][['from','unit_rate_excl_vat']].copy()
@@ -105,13 +99,13 @@ def singleveh_BAU_schedule(journeys, day, vehicle, eprice):
     for idx in timesidx:
         if single_profile.loc[idx,'from']  <= return_datetime:
             single_profile.loc[idx,'Output_BAU'] = 0
-        elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > gv.CHARGER_POWER/2:
-            single_profile.loc[idx,'Output_BAU'] = gv.CHARGER_POWER / 2 #FIXME generalise for any time interval
+        elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > gv.POWER_INT:
+            single_profile.loc[idx,'Output_BAU'] = (gv.POWER_INT )
         elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > 0:
             single_profile.loc[idx,'Output_BAU'] = gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU']
         single_profile.loc[idx,'SOC_BAU'] = gv.BATTERY_CAPACITY - required_charge + single_profile['Output_BAU'].sum() * gv.CHARGER_EFF
         prev_idx = idx  
-    single_profile['Vehicle'] = vehicle    
+    single_profile['Route_ID'] = vehicle    
     return single_profile
 
     # Create second BAU scheduling function that uses multi index
@@ -128,13 +122,13 @@ def BAU_charging(journeys, eprice):
         if day.date() == time_range[1].date():
             break
         # Iterate over vehicles, copy to correct column
-        vehicle_profiles = {}
-        for vehicle in range(gv.NUM_VEHICLES):
-            vehicle_profiles[vehicle] = singleveh_BAU_schedule(journeys, day, vehicle, eprice)
-        day_profile[day] = pd.concat(list(vehicle_profiles.values()))
+        route_profiles = {}
+        for route in journeys.loc[day].index:
+            route_profiles[route] = singleveh_BAU_schedule(journeys, day, route, eprice)
+        day_profile[day] = pd.concat(list(route_profiles.values()))
     profiles = pd.concat(list(day_profile.values()))
-    profiles.sort_values(by=['from','Vehicle'],inplace=True)
-    profiles.set_index(['from','Vehicle'],inplace=True)
+    profiles.sort_values(by=['from','Route_ID'],inplace=True)
+    profiles.set_index(['from','Route_ID'],inplace=True)
     return profiles
 
 # Takes a single day from BAU
@@ -171,6 +165,7 @@ def summary_outputs(profile, journeys):
     site['unit_rate_excl_vat'] = site['unit_rate_excl_vat']/gv.NUM_VEHICLES
     site['SOC_Opt'] = site['SOC_Opt']/gv.NUM_VEHICLES
     site['SOC_BAU'] = site['SOC_BAU']/gv.NUM_VEHICLES
+    # TODO: add number of vehicles charging
 
     global_summary = site.sum()
     global_summary.drop(labels=['unit_rate_excl_vat','SOC_Opt','SOC_BAU'], inplace=True)
