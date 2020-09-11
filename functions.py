@@ -144,3 +144,34 @@ def create_daily_schedule(journeys, day):
     day_profile = journeys[(journeys.index.get_level_values(0) < end_datetime)
     & (journeys.index.get_level_values(0) >= start_datetime)][['Output_BAU','unit_rate_excl_vat']]
     return day_profile
+
+# Creates summary columns and dataframes from outputs
+def summary_outputs(profile, journeys):
+    vehicles = journeys.index
+    day_profile = profile.copy()
+    day_profile['Charge_Delivered_Opt'] = day_profile['Output_Opt'] * gv.CHARGER_EFF
+    day_profile['Charge_Delivered_BAU'] = day_profile['Output_BAU'] * gv.CHARGER_EFF
+    day_profile['Electricity_Cost_Opt'] = day_profile['Output_Opt'] * day_profile['unit_rate_excl_vat']
+    day_profile['Electricity_Cost_BAU'] = day_profile['Output_BAU'] * day_profile['unit_rate_excl_vat']
+    for vehicle in vehicles:
+        opt_soc = (gv.BATTERY_CAPACITY - journeys.loc[vehicle,'Energy_Required'] + day_profile.loc[(slice(None),vehicle),'Charge_Delivered_Opt'].cumsum())*100 / gv.BATTERY_CAPACITY
+        day_profile.loc[(slice(None),vehicle),'SOC_Opt'] = opt_soc
+        opt_BAU = (gv.BATTERY_CAPACITY - journeys.loc[vehicle,'Energy_Required'] + day_profile.loc[(slice(None),vehicle),'Charge_Delivered_BAU'].cumsum())*100 / gv.BATTERY_CAPACITY
+        day_profile.loc[(slice(None),vehicle),'SOC_BAU'] = opt_BAU
+
+    day_journeys = journeys.copy()
+    day_journeys['Energy_Use_Opt'] = day_profile['Output_Opt'].groupby(level=1).sum()
+    day_journeys['Energy_Use_BAU'] = day_profile['Output_BAU'].groupby(level=1).sum()
+    day_journeys['Electricity_Cost_Opt'] = day_profile['Electricity_Cost_Opt'].groupby(level=1).sum()
+    day_journeys['Electricity_Cost_BAU'] = day_profile['Electricity_Cost_BAU'].groupby(level=1).sum()
+    day_journeys['Peak_Output_Opt'] = day_profile['Output_Opt'].groupby(level=1).max()
+    day_journeys['Peak_Output_BAU'] = day_profile['Output_BAU'].groupby(level=1).max()
+
+    site = day_profile.groupby(level=0).sum()
+    site['unit_rate_excl_vat'] = site['unit_rate_excl_vat']/gv.NUM_VEHICLES
+    site['SOC_Opt'] = site['SOC_Opt']/gv.NUM_VEHICLES
+    site['SOC_BAU'] = site['SOC_BAU']/gv.NUM_VEHICLES
+
+    global_summary = site.sum()
+    global_summary.drop(labels=['unit_rate_excl_vat','SOC_Opt','SOC_BAU'], inplace=True)
+    return day_profile, day_journeys, site, global_summary
