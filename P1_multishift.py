@@ -12,7 +12,7 @@ import global_variables as gv
 import functions as f
 import matplotlib.pyplot as plt
 import glob
-import timeit
+import time
 
 import random
 
@@ -98,11 +98,13 @@ output_df = {}
 PuLP_prob = {}
 day_profile_out = day_profile.copy()
 for ca in gv.CATS:
+    start = time.process_time()
     output_df[ca], PuLP_prob[ca] = linear_optimiser(
         day_profile,
         day_journeys,
         ca
         )
+    print('Time:' , time.process_time() - start)
     day_profile_out = day_profile_out.merge(
     output_df[ca],
     how='left',
