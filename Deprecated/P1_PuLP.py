@@ -68,26 +68,7 @@ for period in time_period:
 prob.solve()
 print("Status:", LpStatus[prob.status])
 
-# Get output variables
-charge_output = []
 
-for period, vehicle in outputs:
-    var_output = {
-        'from': period,
-        'Vehicle': vehicle,
-        'Output_Opt': outputs[(period, vehicle)].varValue
-    }
-    charge_output.append(var_output)
-
-output_df = pd.DataFrame.from_records(charge_output).sort_values(['from','Vehicle'])
-output_df.set_index(['from', 'Vehicle'], inplace=True)
-print('Cost:', value(prob.objective))
-day_profile = day_profile.merge(
-    output_df,
-    how='left',
-    left_index=True,
-    right_index=True,
-    )
 
 day_profile, day_journeys, site_summary, global_summary = f.summary_outputs(
     day_profile,

@@ -1,3 +1,10 @@
+Output_Opt          913.359733
+Output_BAU          913.359733
+ChDelivered_Opt     822.023760
+ECost_Opt          7967.091993
+ChDelivered_BAU     822.023760
+ECost_BAU          9203.275490
+global_variabes.py:
 # Global variables to use in all calculations
 # Created 1 September 2020
 
@@ -96,4 +103,4 @@ for i in range(NUM_VEHICLES):
 
 Power_output = {}
 for i in range(NUM_VEHICLES):
-    Power_output[i] = 'Output_{}'.format(i)
+    Power_output[i] = 'Output_{}'.format(i)Multiple shifts

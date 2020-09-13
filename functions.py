@@ -81,50 +81,40 @@ def create_timelist(): #FIXME so that it's always a numpy array
 
 # Create a function to get daily data
 def get_daily_data(journeys,day):
-    daily_df = journeys.loc[(day)][['End_Time_of_Route','Energy_Required']]
-    daily_df['Start_next_route'] = journeys.loc[(day+dt.timedelta(days=1))]['Start_Time_of_Route']
+    daily_df = journeys.loc[(day)]
+    daily_df.drop(columns=['Branch_ID'], inplace=True)
+    daily_df.sort_values(by=['Start_Time_of_Route'], inplace=True)
     return daily_df
 
-# Create function for one vehicle, in one day
-def singleveh_BAU_schedule(journeys, day, vehicle, eprice):
-    return_datetime = journeys.loc[(day, vehicle),'End_Time_of_Route']
-    required_charge = journeys.loc[(day, vehicle),'Energy_Required']
+# Create function for one route, in one day
+def singleroute_BAU_schedule(journeys, day, route, eprice):
     mask = ( (eprice['from'] >= dt.datetime.combine(day, gv.CHAR_ST)) 
     & (eprice['from'] < dt.datetime.combine(day + dt.timedelta(days=1), gv.CHAR_ST)))
-    single_profile = eprice[mask][['from','unit_rate_excl_vat']].copy()
-    timesidx = single_profile.index
-    single_profile['Output_BAU'] = 0
-    single_profile['SOC_BAU'] = gv.BATTERY_CAPACITY - required_charge
-    prev_idx = timesidx[0]
-    for idx in timesidx:
-        if single_profile.loc[idx,'from']  <= return_datetime:
-            single_profile.loc[idx,'Output_BAU'] = 0
-        elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > gv.POWER_INT:
-            single_profile.loc[idx,'Output_BAU'] = (gv.POWER_INT )
-        elif gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU'] > 0:
-            single_profile.loc[idx,'Output_BAU'] = gv.BATTERY_CAPACITY - single_profile.loc[prev_idx,'SOC_BAU']
-        single_profile.loc[idx,'SOC_BAU'] = gv.BATTERY_CAPACITY - required_charge + single_profile['Output_BAU'].sum() * gv.CHARGER_EFF
-        prev_idx = idx  
-    single_profile['Route_ID'] = vehicle    
+    single_profile = eprice[mask][['from','Electricity_Price','Time_Price']].copy()
+    single_profile['Route_ID'] = route
+    single_profile['Vehicle_ID'] = journeys.loc[(day,route)]['Vehicle_ID']
     return single_profile
 
-    # Create second BAU scheduling function that uses multi index
-
-def BAU_charging(journeys, eprice):
+def BAU_charging(journeys, eprice): # TODO change to empty charging
     # Create df for charge profile, with time slots in that time range. 
-    _, time_range = create_empty_schedule(journeys, eprice)
+    _, time_range = create_empty_schedule(journeys, eprice) # TODO Make this efficient
     # Iterate over each day
     dates = journeys.index.unique(level='date')
-    print(dates)
+    # print(dates)
     day_profile = {}
+    vehicles = journeys['Vehicle_ID'].unique()
     for date in dates:
         day = date.to_pydatetime()
         if day.date() == time_range[1].date():
             break
-        # Iterate over vehicles, copy to correct column
+        # Iterate over routes, copy to correct column
         route_profiles = {}
         for route in journeys.loc[day].index:
-            route_profiles[route] = singleveh_BAU_schedule(journeys, day, route, eprice)
+            route_profiles[route] = singleroute_BAU_schedule(
+                journeys, 
+                day, 
+                route, 
+                eprice)
         day_profile[day] = pd.concat(list(route_profiles.values()))
     profiles = pd.concat(list(day_profile.values()))
     profiles.sort_values(by=['from','Route_ID'],inplace=True)
@@ -136,37 +126,46 @@ def create_daily_schedule(journeys, day):
     start_datetime = day + gv.CHAR_ST_DELTA
     end_datetime = start_datetime + dt.timedelta(days=1)
     day_profile = journeys[(journeys.index.get_level_values(0) < end_datetime)
-    & (journeys.index.get_level_values(0) >= start_datetime)][['Output_BAU','unit_rate_excl_vat']]
+    & (journeys.index.get_level_values(0) >= start_datetime)][[
+        'Electricity_Price',
+        'Time_Price',
+        'Vehicle_ID'
+        ]]
+    day_profile.sort_index(inplace=True)
     return day_profile
 
 # Creates summary columns and dataframes from outputs
 def summary_outputs(profile, journeys):
+    cols=gv.CAT_COLS
     vehicles = journeys.index
     day_profile = profile.copy()
-    day_profile['Charge_Delivered_Opt'] = day_profile['Output_Opt'] * gv.CHARGER_EFF
-    day_profile['Charge_Delivered_BAU'] = day_profile['Output_BAU'] * gv.CHARGER_EFF
-    day_profile['Electricity_Cost_Opt'] = day_profile['Output_Opt'] * day_profile['unit_rate_excl_vat']
-    day_profile['Electricity_Cost_BAU'] = day_profile['Output_BAU'] * day_profile['unit_rate_excl_vat']
-    for vehicle in vehicles:
-        opt_soc = (gv.BATTERY_CAPACITY - journeys.loc[vehicle,'Energy_Required'] + day_profile.loc[(slice(None),vehicle),'Charge_Delivered_Opt'].cumsum())*100 / gv.BATTERY_CAPACITY
-        day_profile.loc[(slice(None),vehicle),'SOC_Opt'] = opt_soc
-        opt_BAU = (gv.BATTERY_CAPACITY - journeys.loc[vehicle,'Energy_Required'] + day_profile.loc[(slice(None),vehicle),'Charge_Delivered_BAU'].cumsum())*100 / gv.BATTERY_CAPACITY
-        day_profile.loc[(slice(None),vehicle),'SOC_BAU'] = opt_BAU
-
     day_journeys = journeys.copy()
-    day_journeys['Energy_Use_Opt'] = day_profile['Output_Opt'].groupby(level=1).sum()
-    day_journeys['Energy_Use_BAU'] = day_profile['Output_BAU'].groupby(level=1).sum()
-    day_journeys['Electricity_Cost_Opt'] = day_profile['Electricity_Cost_Opt'].groupby(level=1).sum()
-    day_journeys['Electricity_Cost_BAU'] = day_profile['Electricity_Cost_BAU'].groupby(level=1).sum()
-    day_journeys['Peak_Output_Opt'] = day_profile['Output_Opt'].groupby(level=1).max()
-    day_journeys['Peak_Output_BAU'] = day_profile['Output_BAU'].groupby(level=1).max()
+    for ca in gv.CATS:
+        day_profile[cols['CHARGE_DEL'][ca]] = (
+            day_profile[cols['OUTPUT'][ca]] 
+            * gv.CHARGER_EFF)
+        day_profile[cols['ECOST'][ca]] = (
+            day_profile[cols['OUTPUT'][ca]] 
+            * day_profile[cols['PRICE']['opt']])
+        
+        for vehicle in vehicles:
+            opt = (gv.BATTERY_CAPACITY - journeys.loc[vehicle,'Energy_Required'] 
+            + day_profile.loc[(slice(None),vehicle),cols['CHARGE_DEL'][ca]].cumsum())*100 / gv.BATTERY_CAPACITY
+            day_profile.loc[(slice(None),vehicle),cols['SOC'][ca]] = opt
+
+        day_journeys[cols['OUTPUT'][ca]] = day_profile[cols['OUTPUT'][ca]].groupby(level=1).sum()
+        day_journeys[cols['ECOST'][ca]] = day_profile[cols['ECOST'][ca]].groupby(level=1).sum()
+        day_journeys[cols['PEAK'][ca]] = day_profile[cols['OUTPUT'][ca]].groupby(level=1).max()
 
     site = day_profile.groupby(level=0).sum()
-    site['unit_rate_excl_vat'] = site['unit_rate_excl_vat']/gv.NUM_VEHICLES
-    site['SOC_Opt'] = site['SOC_Opt']/gv.NUM_VEHICLES
-    site['SOC_BAU'] = site['SOC_BAU']/gv.NUM_VEHICLES
-    # TODO: add number of vehicles charging
+    site[cols['PRICE']['opt']] = day_profile[cols['PRICE']['opt']].groupby(level=0).mean()
+    for ca in gv.CATS:
+        site[cols['SOC'][ca]] = day_profile[cols['SOC'][ca]].groupby(level=0).mean()
+        site[cols['NUM'][ca]] = day_profile[cols['OUTPUT'][ca]].astype(bool).groupby(level=0).sum()
+    site.drop(columns=[cols['PRICE']['BAU'], 'Vehicle_ID'], inplace=True)
 
     global_summary = site.sum()
-    global_summary.drop(labels=['unit_rate_excl_vat','SOC_Opt','SOC_BAU'], inplace=True)
+    global_summary.drop(labels=[cols['PRICE']['opt']], inplace=True)
+    for ca in gv.CATS:
+        global_summary.drop(labels=[cols['SOC'][ca],cols['NUM'][ca]], inplace=True)
     return day_profile, day_journeys, site, global_summary
