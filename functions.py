@@ -4,21 +4,36 @@ import numpy as np
 import global_variables as gv
 import pandas as pd
 import datetime as dt
+import matplotlib.pyplot as plt
 
 def create_empty_schedule(journeys, eprice):
     start_range = dt.datetime.combine(min(journeys.index.get_level_values('date').date), gv.CHAR_ST)
     end_range = dt.datetime.combine(max(journeys.index.get_level_values('date').date), gv.CHAR_ST)
-    time_span = end_range - start_range
-    num_intervals = time_span / gv.TIME_INT
-    # Create dataframe with pricing data for that range
-    range_mask = ((eprice['from'] >= start_range) & 
-                    (eprice['from'] < end_range))
-    charging_profile = eprice[range_mask].copy()
-    charging_profile.reset_index(inplace=True, drop=True)
-    charging_profile.drop(columns=['to'], inplace=True)
-    return charging_profile, [start_range, end_range]
+    time_range = [start_range, end_range]
+    # Iterate over each day
+    dates = journeys.index.unique(level='date')
+    # print(dates)
+    day_profile = {}
+    vehicles = journeys['Vehicle_ID'].unique()
+    for date in dates:
+        day = date.to_pydatetime()
+        if day.date() == time_range[1].date():
+            break
+        # Iterate over routes, copy to correct column
+        route_profiles = {}
+        for route in journeys.loc[day].index:
+            route_profiles[route] = singleroute_BAU_schedule(
+                journeys, 
+                day, 
+                route, 
+                eprice)
+        day_profile[day] = pd.concat(list(route_profiles.values()))
+    profiles = pd.concat(list(day_profile.values()))
+    profiles.sort_values(by=['from','Route_ID'],inplace=True)
+    profiles.set_index(['from','Route_ID'],inplace=True)
+    return profiles
 
-def dumb_charging(journeys, eprice):
+def dumb_charging_no(journeys, eprice): # TODO am I using this?
     # Create df for charge profile, with time slots in that time range. 
     empty_profile, time_range = create_empty_schedule(journeys, eprice)
     # Iterate over each day
@@ -81,7 +96,7 @@ def create_timelist(): #FIXME so that it's always a numpy array
 
 # Create a function to get daily data
 def get_daily_data(journeys,day):
-    daily_df = journeys.loc[(day)]
+    daily_df = journeys.loc[(day)].copy()
     daily_df.drop(columns=['Branch_ID'], inplace=True)
     daily_df.sort_values(by=['Start_Time_of_Route'], inplace=True)
     return daily_df
@@ -94,32 +109,6 @@ def singleroute_BAU_schedule(journeys, day, route, eprice):
     single_profile['Route_ID'] = route
     single_profile['Vehicle_ID'] = journeys.loc[(day,route)]['Vehicle_ID']
     return single_profile
-
-def BAU_charging(journeys, eprice): # TODO change to empty charging
-    # Create df for charge profile, with time slots in that time range. 
-    _, time_range = create_empty_schedule(journeys, eprice) # TODO Make this efficient
-    # Iterate over each day
-    dates = journeys.index.unique(level='date')
-    # print(dates)
-    day_profile = {}
-    vehicles = journeys['Vehicle_ID'].unique()
-    for date in dates:
-        day = date.to_pydatetime()
-        if day.date() == time_range[1].date():
-            break
-        # Iterate over routes, copy to correct column
-        route_profiles = {}
-        for route in journeys.loc[day].index:
-            route_profiles[route] = singleroute_BAU_schedule(
-                journeys, 
-                day, 
-                route, 
-                eprice)
-        day_profile[day] = pd.concat(list(route_profiles.values()))
-    profiles = pd.concat(list(day_profile.values()))
-    profiles.sort_values(by=['from','Route_ID'],inplace=True)
-    profiles.set_index(['from','Route_ID'],inplace=True)
-    return profiles
 
 # Takes a single day from BAU
 def create_daily_schedule(journeys, day):
@@ -169,3 +158,71 @@ def summary_outputs(profile, journeys):
     for ca in gv.CATS:
         global_summary.drop(labels=[cols['SOC'][ca],cols['NUM'][ca]], inplace=True)
     return day_profile, day_journeys, site, global_summary
+
+# Creates summary plot
+def summary_plot(site_summary):
+    fig, axs = plt.subplots(5,
+    figsize=(12,10),
+    sharex=True, 
+    gridspec_kw={'hspace':0.1})
+
+    x = site_summary.index.strftime('%H:%M')
+    cats = gv.CATS
+    cols = gv.CAT_COLS
+
+    for ca in cats:
+        axs[0].plot(
+            x, 
+            site_summary[cols['OUTPUT'][ca]]*2, 
+            label=gv.LABELS[ca], 
+            color=gv.COLOR[ca]
+            )
+        axs[1].plot(x, site_summary[cols['NUM'][ca]], label=ca, color=gv.COLOR[ca])
+        axs[2].plot(x, site_summary[cols['ECOST'][ca]]/100, label=ca, color=gv.COLOR[ca])
+        axs[3].plot(
+            x, 
+            site_summary[cols['SOC'][ca]], 
+            label=gv.LABELS[ca], 
+            color=gv.COLOR[ca])
+
+    axs[4].plot(x, 
+    site_summary[cols['PRICE']['opt']], 
+    label='Eletricity_price', 
+    color=gv.FPS_PURPLE)
+
+    # labels and legends
+    axs[0].set_ylabel('E. Demand (kW)',color=gv.FPS_BLUE, fontweight='bold')
+    axs[1].set_ylabel('# Charging',color=gv.FPS_BLUE, fontweight='bold')
+    axs[2].set_ylabel('E. Costs (GBP)',color=gv.FPS_BLUE, fontweight='bold')
+    axs[3].set_ylabel('SOC (%)',color=gv.FPS_BLUE, fontweight='bold')
+    axs[4].set_ylabel('E. Price (p/kWh)',color=gv.FPS_BLUE, fontweight='bold')
+    axs[4].set_xlabel('Time',color=gv.FPS_BLUE, fontweight='bold')
+    axs[0].legend(frameon=False)
+
+
+    for ax in fig.get_axes():
+        ax.xaxis.set_major_locator(plt.MaxNLocator(10))
+    return fig
+
+# Save BAU profile
+
+def summary_BAU_plot(site_summary):
+    fig, axs = plt.subplots(2,
+    figsize=(5,4),
+    sharex=True,
+    gridspec_kw={'hspace':0.1})
+    x = site_summary.index.strftime('%H:%M')
+    cats = ['BAU','BAU2']
+    cols = gv.CAT_COLS
+
+    for ca in cats:
+        axs[0].plot(x, site_summary[cols['OUTPUT'][ca]],color=gv.COLOR[ca])
+        axs[1].plot(x, site_summary[cols['SOC'][ca]],color=gv.COLOR[ca])
+
+    axs[0].set_ylabel('Site output (kW)')
+    axs[1].set_ylabel('SoC (%)')
+    axs[1].set_xlabel('Time')
+    axs[0].set_title('BAU profile')
+    axs[0].xaxis.set_major_locator(plt.MaxNLocator(10))
+    axs[0].legend(['Unconstrained','Constrained'], frameon=False)
+    return fig

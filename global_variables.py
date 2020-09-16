@@ -5,14 +5,15 @@ import datetime as dt
 
 NUM_VEHICLES = 20
 TIME_INT = dt.timedelta(minutes = 30)
+
 RANDOM_SOC_RATIO = 0.2 # randomness introduced into the journey state of charge reqs
-REFR_RATIO = 0.25 #ratio of exta energy use for refrigeration (kWh/km)
-POWER_KM = 0.29 # kWh / mile
+#REFR_RATIO = 0.25 #ratio of exta energy use for refrigeration (kWh/km)
+#POWER_KM = 0.29 # kWh / mile
 START_DT = dt.datetime(2019,2,1,0,0,0)
 TIME_RANGE = dt.timedelta(weeks=1, days=1)
 DAY = dt.datetime(2019,2,10)
-CHARGER_POWER = 21 # kW
-CATS = ['opt','BAU']
+CHARGER_POWER = 22 # kW
+CATS = ['opt','BAU','BAU2']
 VANS = {
     'PROT': [
         3, 4, 6, 11, 12, 14, 
@@ -26,22 +27,31 @@ VANS = {
         ]
     }
 CATEGORY = 'PROT'
-NUM_CHARGERS = NUM_VEHICLES
-POWER_INT = CHARGER_POWER * TIME_INT / dt.timedelta(hours=1)
 CHARGER_EFF = 0.9
 BATTERY_CAPACITY = 75 #kWh
+
+
+NUM_CHARGERS = NUM_VEHICLES
+TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
+POWER_INT = CHARGER_POWER * TIME_FRACT
+
 SITE_CAPACITY = {
-    'opt': 150,  # kWh (in a half-hour period so eq. 200 kW)
+    'opt': 50,  # kWh (in a half-hour period so eq. 100 kW)
     'BAU': 10000,
-    'BAU2': 150
+    'BAU2': 50
  }
 CHAR_ST = dt.time(11, 0,0) # 11 am is start of charging period each day #FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=11)
 
-TIME_FRACT = 0.5
+
 DAY_INTERVALS = 48
 IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
                 'End_Time_of_Route', 'Energy_Required','vannumber_ev_'] 
+
+FPS_BLUE = '#004A9C'
+FPS_GREEN = '#45D281'
+FPS_YELLOW = '#FEC001'
+FPS_PURPLE = '#A365E0'
 
 CAT_COLS = {
     'PRICE' : {
@@ -82,9 +92,15 @@ CAT_COLS = {
 }
 
 COLOR = {
-    'opt': 'tab:blue',  # kWh (in a half-hour period so eq. 200 kW)
-    'BAU': 'tab:green',
-    'BAU2': 'tab:purple'
+    'opt': FPS_YELLOW,  
+    'BAU': FPS_BLUE,
+    'BAU2': FPS_GREEN
+ }
+
+LABELS = {
+    'opt': 'Smart Charging',  
+    'BAU': 'Unconstrained benchmark',
+    'BAU2': 'Constrained benchmark'
  }
 data_path = r"Data/JPL_allocation/Vivaro/*.csv"
 pricing_path = r"Data/Octopus Agile Rates_2019_LON.csv"
