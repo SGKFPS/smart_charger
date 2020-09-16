@@ -10,10 +10,11 @@ from pulp import *
 import pickle
 import global_variables as gv
 import functions as f
+import lin_prog_functions as lpf
+import output_functions as of
 import matplotlib.pyplot as plt
 import glob
 import time
-import lin_prog as lp
 import random
 import os
 
@@ -33,7 +34,7 @@ PuLP_prob = {}
 day_profile_out = day_profile.copy()
 for ca in gv.CATS:
     start = time.process_time()
-    output_df[ca], PuLP_prob[ca] = lp.linear_optimiser_V1(
+    output_df[ca], PuLP_prob[ca] = lpf.linear_optimiser_V1(
         day_profile,
         day_journeys,
         ca
@@ -46,7 +47,7 @@ for ca in gv.CATS:
     right_index=True,
     )
 
-day_profile, day_journeys, site_summary, global_summary = f.summary_outputs(
+day_profile, day_journeys, site_summary, global_summary = of.summary_outputs(
     day_profile_out,
     day_journeys
 )
@@ -54,21 +55,34 @@ day_profile, day_journeys, site_summary, global_summary = f.summary_outputs(
 # Create all the outputs
 os.makedirs('Outputs/Logs/run{}'.format(run))
 
-fig = f.summary_plot(site_summary)
-fig2 = f.summary_BAU_plot(site_summary)
+# Make and save figures
+fig_summary = of.summary_plot(site_summary)
+fig_summary.savefig(
+    'Outputs/Logs/run{}/fig{}.svg'.format(run,run))
+fig_summary.savefig(
+    'Outputs/Logs/run{}/fig{}.jpg'.format(run,run))
+plt.close(fig_summary)
 
-# Save figures
-fig.savefig('Outputs/Logs/run{}/fig{}.svg'.format(run,run),facecolog='white')
-fig.savefig('Outputs/Logs/run{}/fig{}.jpg'.format(run,run),facecolog='white')
-plt.close(fig)
-
-fig2.savefig(
+fig_BAU = of.summary_BAU_plot(site_summary)
+fig_BAU.savefig(
     'Outputs/Logs/run{}/fig_BAU{}.svg'.format(run,run),
-    facecolog='white',
-    bbox_inches = "tight"
-    )
-plt.close(fig2)
+    bbox_inches = "tight")
+plt.close(fig_BAU)
 
+fig_scatter_outputs = of.scatter_plot(site_summary)
+fig_scatter_outputs.savefig(
+    'Outputs/Logs/run{}/opt_scatter{}.jpg'.format(run,run),
+    bbox_inches = "tight")
+plt.close(fig_scatter_outputs)
+
+min_time = dt.datetime(2019,2,10,5,0,0)
+max_time = dt.datetime(2019,2,10,23,30,0)
+fig_journey_hist = of.histograms_journeys(day_journeys, min_time, max_time)
+fig_journey_hist.savefig(
+    'Outputs/Logs/run{}/journey_hist{}.jpg'.format(run,run),
+    bbox_inches = "tight")
+plt.close(fig_journey_hist)
+ 
 # Create a list of settings
 with open('global_variables.py','r') as f:
     global_variables = f.read()
@@ -87,53 +101,3 @@ for ca in gv.CATS:
 day_profile.to_json(r'Outputs/Logs/run{}/profiles{}.json'.format(run,run))
 day_journeys.to_json(r'Outputs/Logs/run{}/vehicles{}.json'.format(run,run))
 site_summary.to_json(r'Outputs/Logs/run{}/site_summary{}.json'.format(run,run))
-
-
-# # Save scatter plot
-
-# fig, axs = plt.subplots(1,
-# figsize=(8,4))
-
-# x = site_summary.groupby('Electricity_Price').mean().index
-# y1 = site_summary.groupby('Electricity_Price').sum()
-# cols=['Output_BAU','Output_BAU2','Output_Opt']
-# y1[cols] = y1[cols].replace({0:np.nan})
-
-# axs.scatter(x, y1['Output_Opt'],color=gv.COLOR['opt'],alpha=1,label='Smart Charging')
-# axs.scatter(x, y1['Output_BAU'],color=gv.COLOR['BAU'],alpha=0.6,label='Unconstrained BAU')
-# axs.scatter(x, y1['Output_BAU2'],color=gv.COLOR['BAU2'],alpha=0.6,label='Constrained BAU')
-
-# axs.set_ylabel('Output (kWh)')
-# axs.set_xlabel('Electricity Price (p / kWh)')
-# axs.xaxis.set_major_locator(plt.MaxNLocator(10))
-# axs.legend()
-# fig.savefig('Outputs/Logs/run{}/opt_price{}.jpg'.format(run,run),facecolog='white',
-# bbox_inches = "tight")
-
-# # plot histograms
-# min_time = dt.datetime(2019,2,10,5,0,0)
-# max_time = dt.datetime(2019,2,10,23,30,0)
-# bins_time = [min_time + i * dt.timedelta(minutes=30) for i in range (38)]
-
-# fig, ax = plt.subplots(1,
-# figsize=(6,2))
-# ax.hist(day_journeys['Start_Time_of_Route'], 
-# bins=bins_time,
-# color=gv.FPS_BLUE,
-# alpha=0.6,
-# label='Departures')
-# ax.hist(day_journeys['End_Time_of_Route'], 
-# bins=bins_time,
-# color=gv.FPS_GREEN,
-# alpha=0.6,
-# label='Arrivals')
-# # locator = mdates.HourLocator()
-# # ax.set_xlim([min_time,max_time])
-# # ax.xaxis.set_major_locator(locator)
-# ax.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
-# ax.legend(frameon=False)
-# ax.set_xlabel('Time interval', color=gv.FPS_BLUE, fontweight='bold')
-# ax.set_ylabel('# Vehicles', color=gv.FPS_BLUE, fontweight='bold')
-# fig.savefig('Outputs/Logs/run{}/journeys{}.jpg'.format(run,run),facecolog='white',
-# bbox_inches = "tight")
-# plt.show()
