@@ -112,9 +112,13 @@ def clean_pricing(path):
     return pricing
 
 all_journeys = prep_data(gv.data_path, gv.CATEGORY)
+print('All journeys done')
 journeys_range = get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
+print('Range journeys done')
 price_data = clean_pricing(gv.pricing_path)
+print('Prices done')
 empty_profile = f.create_empty_schedule(journeys_range, price_data)
+print('Profiles done')
 
 # # Pickle
 pickle.dump(all_journeys,open('Outputs/all_journeys','wb'))

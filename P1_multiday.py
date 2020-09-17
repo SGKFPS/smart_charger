@@ -18,18 +18,18 @@ import time
 import random
 import os
 
-run = 22# For now change this manually
-notes = 'Multiday'
+run = 25# For now change this manually
+notes = 'Multiday whole year'
 
 # Import journey and price data
-
+script_strt = time.process_time()
 journeys = pickle.load(open('Outputs/journeys_range','rb'))
 price_data = pickle.load(open('Outputs/price_data','rb')) #TODO do I need this?
 empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
 dates = np.unique(empty_profile.index.get_level_values(0).date)
 dates = np.delete(dates,-1)
 all_days_profile = []
-dates_status = []
+dates_status = ''
 status = 0
 i = 0
 for date in dates:
@@ -65,27 +65,38 @@ for date in dates:
             '\nStatus:',day_status, ':', PuLP_prob['opt'].status, PuLP_prob['BAU'].status,PuLP_prob['BAU2'].status,
             '\nCost:', value(PuLP_prob['opt'].objective))
         all_days_profile.append(day_profile_out)
-        dates_status.append([date,day_status])
+        dates_status += str([date,day_status])
+        dates_status += '\n'
 
 profile_out = pd.concat(all_days_profile)
 print(profile_out.shape)
 print(dates_status)
 
-# day_profile, day_journeys, site_summary, global_summary = of.summary_outputs(
-#     day_profile_out,
-#     day_journeys
-# )
+range_profile, range_journeys, veh_profile, site_profile, days_summary, global_summary = of.summary_outputs(
+   profile_out, 
+    journeys, 
+    dates)
 
-# # Create all the outputs
-# os.makedirs('Outputs/Logs/run{}'.format(run))
+print(global_summary)
 
-# # Make and save figures
-# fig_summary = of.summary_plot(site_summary)
-# fig_summary.savefig(
-#     'Outputs/Logs/run{}/fig{}.svg'.format(run,run))
-# fig_summary.savefig(
-#     'Outputs/Logs/run{}/fig{}.jpg'.format(run,run))
-# plt.close(fig_summary)
+# Create all the outputs
+os.makedirs('Outputs/Logs/run{}'.format(run))
+
+# Make and save daily figures
+os.makedirs('Outputs/Logs/run{}/daily'.format(run))
+for date in dates:
+    day = dt.datetime.combine(date, dt.datetime.min.time())
+    day_profile = of.create_daily_summary(site_profile, day)
+    fig_summary = of.summary_plot(day_profile)
+    fig_summary.savefig(
+        'Outputs/Logs/run{}/daily/fig{}.svg'.format(run,date))
+    plt.close(fig_summary)
+
+range_fig = of.daily_summary_plot(days_summary)
+range_fig.savefig(
+    'Outputs/Logs/run{}/fig_range{}.svg'.format(run,run),
+    bbox_inches = "tight")
+plt.close(range_fig)
 
 # fig_BAU = of.summary_BAU_plot(site_summary)
 # fig_BAU.savefig(
@@ -107,21 +118,24 @@ print(dates_status)
 #     bbox_inches = "tight")
 # plt.close(fig_journey_hist)
  
-# # Create a list of settings
-# with open('global_variables.py','r') as f:
-#     global_variables = f.read()
+# Create a list of settings
+with open('global_variables.py','r') as f:
+    global_variables = f.read()
 
-# with open('Outputs/Logs/run{}/variables{}.csv'.format(run,run),'a') as f:
-#     f.write(global_summary.to_string())
-#     f.write('\nglobal_variabes.py:\n')
-#     f.write(global_variables)
-#     f.write(notes)
+with open('Outputs/Logs/run{}/variables{}.csv'.format(run,run),'a') as f:
+    f.write(global_summary.to_string())
+    f.write('\nglobal_variabes.py:\n')
+    f.write(global_variables)
+    f.write(notes)
+    f.write(dates_status)
 
-# # Write problem to an .lp file
-# for ca in gv.CATS:
-#     PuLP_prob[ca].writeLP("Outputs/Logs/run{}/multi_vehicle.lp".format(run))
+# Write problem to an .lp file
+PuLP_prob['opt'].writeLP("Outputs/Logs/run{}/multi_vehicle.lp".format(run))
 
-# # Save dataframes
-# day_profile.to_json(r'Outputs/Logs/run{}/profiles{}.json'.format(run,run))
-# day_journeys.to_json(r'Outputs/Logs/run{}/vehicles{}.json'.format(run,run))
-# site_summary.to_json(r'Outputs/Logs/run{}/site_summary{}.json'.format(run,run))
+# Save dataframes
+range_profile.to_json(r'Outputs/Logs/run{}/route_profiles{}.json'.format(run,run))
+veh_profile.to_json(r'Outputs/Logs/run{}/veh_profiles{}.json'.format(run,run))
+range_journeys.to_json(r'Outputs/Logs/run{}/journeys{}.json'.format(run,run))
+site_profile.to_json(r'Outputs/Logs/run{}/site_summary{}.json'.format(run,run))
+
+print('Time:', gv.TIME_RANGE, time.process_time() - script_strt)

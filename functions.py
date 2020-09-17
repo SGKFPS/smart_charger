@@ -71,7 +71,7 @@ def singleroute_BAU_schedule(journeys, day, route, eprice):
     single_profile['Vehicle_ID'] = journeys.loc[(day,route)]['Vehicle_ID']
     return single_profile
 
-# Takes a single day from BAU
+# Takes a single day from journey data and makes a schedule
 def create_daily_schedule(journeys, day):
     start_datetime = day + gv.CHAR_ST_DELTA
     end_datetime = start_datetime + dt.timedelta(days=1)
@@ -83,3 +83,4 @@ def create_daily_schedule(journeys, day):
         ]]
     day_profile.sort_index(inplace=True)
     return day_profile
+

@@ -9,7 +9,7 @@ RANDOM_SOC_RATIO = 0.2 # randomness introduced into the journey state of charge 
 #REFR_RATIO = 0.25 #ratio of exta energy use for refrigeration (kWh/km)
 #POWER_KM = 0.29 # kWh / mile
 START_DT = dt.datetime(2019,2,1,0,0,0)
-TIME_RANGE = dt.timedelta(weeks=1, days=1)
+TIME_RANGE = dt.timedelta(weeks=45)
 DAY = dt.datetime(2019,2,10)
 CHARGER_POWER = 22 # kW
 CATS = ['opt','BAU','BAU2']
