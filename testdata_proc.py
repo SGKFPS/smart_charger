@@ -112,8 +112,6 @@ def clean_pricing(path):
     return pricing
 
 all_journeys = prep_data(gv.data_path, gv.CATEGORY)
-
-
 journeys_range = get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
 price_data = clean_pricing(gv.pricing_path)
 empty_profile = f.create_empty_schedule(journeys_range, price_data)

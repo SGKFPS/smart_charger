@@ -5,7 +5,6 @@ import datetime as dt
 
 NUM_VEHICLES = 20
 TIME_INT = dt.timedelta(minutes = 30)
-
 RANDOM_SOC_RATIO = 0.2 # randomness introduced into the journey state of charge reqs
 #REFR_RATIO = 0.25 #ratio of exta energy use for refrigeration (kWh/km)
 #POWER_KM = 0.29 # kWh / mile
@@ -29,7 +28,6 @@ VANS = {
 CATEGORY = 'PROT'
 CHARGER_EFF = 0.9
 BATTERY_CAPACITY = 75 #kWh
-
 
 NUM_CHARGERS = NUM_VEHICLES
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)

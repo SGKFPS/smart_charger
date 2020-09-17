@@ -101,3 +101,26 @@ for ca in gv.CATS:
 day_profile.to_json(r'Outputs/Logs/run{}/profiles{}.json'.format(run,run))
 day_journeys.to_json(r'Outputs/Logs/run{}/vehicles{}.json'.format(run,run))
 site_summary.to_json(r'Outputs/Logs/run{}/site_summary{}.json'.format(run,run))
+
+########################
+#To tidy json dataframes
+# day_profile['Index'] = day_profile.index.values
+# day_profile['from'] = day_profile['Index'].str.split('\'').str[1]
+# day_profile['Route_ID'] = day_profile['Index'].str[-8:-1]
+# day_profile['from'] = day_profile['from'].astype('datetime64[ns]')
+# day_profile.drop(columns='Index',inplace=True)
+# day_profile.set_index(['from','Route_ID'],inplace=True)
+
+# site_summary['Index'] = site_summary.index.values
+# site_summary['from'] = site_summary['Index'].astype('datetime64[ns]')
+# site_summary.drop(columns='Index',inplace=True)
+# site_summary.set_index(['from'],inplace=True)
+# site_summary.head()
+
+# # To set fonts
+# font_dirs = ['Data\Source_Sans_Pro', ]
+# font_files = font_manager.findSystemFonts(fontpaths=font_dirs)
+# font_list = font_manager.createFontList(font_files)
+# font_manager.fontManager.ttflist.extend(font_list)
+
+# mpl.rcParams['font.family'] = 'Source Sans Pro'

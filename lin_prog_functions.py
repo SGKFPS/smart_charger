@@ -54,20 +54,22 @@ def linear_optimiser_V1(profile,journeys,ca):
     
     # Solve and print to the screen
     prob.solve()
-    print("Status:",ca, LpStatus[prob.status])
-
+    #print(ca, "status:", LpStatus[prob.status])
     # Get output variables
     charge_output = []
-
     for period, route in outputs:
+        if prob.status == 1:
+            x =  outputs[(period, route)].varValue
+        else:
+            x = 0
         var_output = {
             'from': period,
             'Route_ID': route,
-            output_col: outputs[(period, route)].varValue
+            output_col: x
         }
         charge_output.append(var_output)
 
     df = pd.DataFrame.from_records(charge_output).sort_values(['from','Route_ID'])
     df.set_index(['from', 'Route_ID'], inplace=True)
-    print('Cost:', value(prob.objective))
+    #print('Cost:', value(prob.objective))
     return df, prob
