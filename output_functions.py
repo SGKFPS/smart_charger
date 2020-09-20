@@ -44,7 +44,7 @@ def summary_outputs(profile, journeys,dates):
         #site[cols['SOC'][ca]] = day_profile[cols['SOC'][ca]].groupby(level=0).mean()
         site[cols['NUM'][ca]] = veh_profile[cols['OUTPUT'][ca]].astype(bool).groupby(level=0).sum()
 
-    # Daily summaries
+    # Daily summaries 
     site['date'] = site.index.date - (
         site.index.time < gv.CHAR_ST).astype(int) * dt.timedelta(days=1)
     day_summary = site.groupby('date').sum()
@@ -58,7 +58,11 @@ def summary_outputs(profile, journeys,dates):
         day_summary['ECost_BAU2'] - day_summary['ECost_Opt']
         )/day_summary['ECost_BAU2']
 
-    global_summary = day_summary.sum()
+    # Clean to only optimal days
+    clean_summary = day_summary.copy()
+    for ca in gv.CATS:
+        clean_summary = clean_summary[clean_summary[gv.CAT_COLS['OUTPUT'][ca]] !=0]
+    global_summary = clean_summary.sum()
     global_summary['%BAU'] = 100 * (
         global_summary['ECost_BAU'] - global_summary['ECost_Opt']
         )/global_summary['ECost_BAU']
@@ -138,19 +142,19 @@ def daily_summary_plot(summary):
         color='tab:red'
         )
     for ca in cats:
-        axs[1].plot(
+        axs[1].scatter(
             x,
             summary[cols['ECOST'][ca]]/100,
             label=ca,
             color=gv.COLOR[ca]
         )
-    axs[2].plot(
+    axs[2].scatter(
         x,
         summary['%BAU'],
         label='BAU',
         color=gv.COLOR['BAU']
     )
-    axs[2].plot(
+    axs[2].scatter(
         x,
         summary['%BAU2'],
         label='BAU2',
@@ -229,7 +233,9 @@ def scatter_plot(site_summary):
     axs.legend(frameon=False)
     return fig
 
-# plot histograms
+# min_time = dt.datetime(2019,2,10,5,0,0)
+# max_time = dt.datetime(2019,2,10,23,30,0)
+# plot histograms of journey data
 def histograms_journeys(day_journeys, min_time, max_time):
     num_bins = int(
         (max_time - min_time).total_seconds() / (gv.TIME_INT.total_seconds()) 

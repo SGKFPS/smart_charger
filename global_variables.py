@@ -5,13 +5,10 @@ import datetime as dt
 
 NUM_VEHICLES = 20
 TIME_INT = dt.timedelta(minutes = 30)
-RANDOM_SOC_RATIO = 0.2 # randomness introduced into the journey state of charge reqs
-#REFR_RATIO = 0.25 #ratio of exta energy use for refrigeration (kWh/km)
-#POWER_KM = 0.29 # kWh / mile
 START_DT = dt.datetime(2019,2,1,0,0,0)
-TIME_RANGE = dt.timedelta(weeks=45)
-DAY = dt.datetime(2019,2,10)
-CHARGER_POWER = 22 # kW
+TIME_RANGE = dt.timedelta(weeks=47)
+DAY = dt.datetime(2019,2,1)
+# CHARGER_POWER = 22 # kW
 CATS = ['opt','BAU','BAU2']
 VANS = {
     'PROT': [
@@ -31,13 +28,13 @@ BATTERY_CAPACITY = 75 #kWh
 
 NUM_CHARGERS = NUM_VEHICLES
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
-POWER_INT = CHARGER_POWER * TIME_FRACT
+#POWER_INT = CHARGER_POWER * TIME_FRACT
 
-SITE_CAPACITY = {
-    'opt': 50,  # kWh (in a half-hour period so eq. 100 kW)
-    'BAU': 10000,
-    'BAU2': 50
- }
+# SITE_CAPACITY = {
+#     'opt': 50,  # kWh (in a half-hour period so eq. 100 kW)
+#     'BAU': 10000,
+#     'BAU2': 50
+#  }
 CHAR_ST = dt.time(11, 0,0) # 11 am is start of charging period each day #FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=11)
 

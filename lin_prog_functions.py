@@ -5,15 +5,17 @@ import global_variables as gv
 import pandas as pd
 import datetime as dt
 from pulp import *
+import functions as f
+import time
 
-def linear_optimiser_V1(profile,journeys,ca):
+def linear_optimiser_V1(profile,journeys,ca,charger,capacity):
     price_col = gv.CAT_COLS['PRICE'][ca]
     output_col = gv.CAT_COLS['OUTPUT'][ca]
     # Define output variable
     outputs = LpVariable.dicts("output",
     ((period, route) for period, route in profile.index),
     lowBound = 0,
-    upBound = gv.CHARGER_POWER * gv.TIME_FRACT,
+    upBound = charger * gv.TIME_FRACT,
     cat = "Continuous"
     )
 
@@ -50,7 +52,7 @@ def linear_optimiser_V1(profile,journeys,ca):
     n = len(time_period.unique())
     for period in time_period:
         prob += lpSum(
-            [outputs[period, route] for route in routes])/n <= gv.SITE_CAPACITY[ca]
+            [outputs[period, route] for route in routes])/n <= capacity[ca]
     
     # Solve and print to the screen
     prob.solve()
@@ -73,3 +75,59 @@ def linear_optimiser_V1(profile,journeys,ca):
     df.set_index(['from', 'Route_ID'], inplace=True)
     #print('Cost:', value(prob.objective))
     return df, prob
+
+# Optimise over a whole range
+def optimise_range(journeys, empty_profile, charger, capacity):
+    dates = np.unique(empty_profile.index.get_level_values(0).date)
+    #dates = np.delete(dates,-1)
+    all_days_profile = []
+    dates_status = ''
+    bad_days = 'Bad days:\n'
+    status = 0
+    for date in dates:
+        day_status = 0
+        start = time.process_time()
+        day = dt.datetime.combine(date, dt.datetime.min.time())
+        day_journeys = f.get_daily_data(journeys, day)
+        day_profile = f.create_daily_schedule(empty_profile, day)
+        if len(day_profile)==0:
+            bad_days += '\nEmpty day:'
+            bad_days += str(date)
+            pass
+        else:
+            output_df = {}
+            PuLP_prob = {}
+            day_profile_out = day_profile.copy()
+            for ca in gv.CATS:
+                output_df[ca], PuLP_prob[ca] = linear_optimiser_V1(
+                    day_profile,
+                    day_journeys,
+                    ca,
+                    charger,
+                    capacity
+                    )
+                day_profile_out = day_profile_out.merge(
+                output_df[ca],
+                how='left',
+                left_index=True,
+                right_index=True,
+                )
+                day_status += PuLP_prob[ca].status
+            
+            print(
+                date,
+            #     '\nTime:', time.process_time() - start,
+                'Status:',day_status, ':', PuLP_prob['opt'].status, PuLP_prob['BAU'].status,PuLP_prob['BAU2'].status)
+            #     '\nCost:', value(PuLP_prob['opt'].objective))
+            all_days_profile.append(day_profile_out)
+            if day_status <3:
+                bad_days += '\nNon-Optimal: '
+                bad_days += str(date)
+                for ca in gv.CATS:
+                    bad_days += '_'
+                    bad_days += str(PuLP_prob[ca].status)
+            dates_status += str([date,day_status])
+            dates_status += '\n'
+
+    profile_out = pd.concat(all_days_profile)
+    return profile_out, dates, bad_days, PuLP_prob

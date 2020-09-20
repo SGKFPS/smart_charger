@@ -18,59 +18,28 @@ import time
 import random
 import os
 
-run = 25# For now change this manually
-notes = 'Multiday whole year'
+# Variables for grid search
+run = 28
+charger_power = 22 # kW
+site_capacity = {
+    'opt': 50,  # kWh (in a half-hour period so eq. 100 kW)
+    'BAU': 10000,
+    'BAU2': 50
+ }
+
+notes = 'Grid test'
+os.makedirs('Outputs/Logs/run{}'.format(run))
 
 # Import journey and price data
 script_strt = time.process_time()
 journeys = pickle.load(open('Outputs/journeys_range','rb'))
-price_data = pickle.load(open('Outputs/price_data','rb')) #TODO do I need this?
 empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
-dates = np.unique(empty_profile.index.get_level_values(0).date)
-dates = np.delete(dates,-1)
-all_days_profile = []
-dates_status = ''
-status = 0
-i = 0
-for date in dates:
-    day_status = 0
-    start = time.process_time()
-    day = dt.datetime.combine(date, dt.datetime.min.time())
-    day_journeys = f.get_daily_data(journeys, day)
-    day_profile = f.create_daily_schedule(empty_profile, day)
-    if len(day_profile)==0:
-        print('Empty day',day)
-        pass
-    else:
-        output_df = {}
-        PuLP_prob = {}
-        day_profile_out = day_profile.copy()
-        for ca in gv.CATS:
-            output_df[ca], PuLP_prob[ca] = lpf.linear_optimiser_V1(
-                day_profile,
-                day_journeys,
-                ca
-                )
-            day_profile_out = day_profile_out.merge(
-            output_df[ca],
-            how='left',
-            left_index=True,
-            right_index=True,
-            )
-            day_status += PuLP_prob[ca].status
-        
-        print(
-            date,
-            '\nTime:', time.process_time() - start,
-            '\nStatus:',day_status, ':', PuLP_prob['opt'].status, PuLP_prob['BAU'].status,PuLP_prob['BAU2'].status,
-            '\nCost:', value(PuLP_prob['opt'].objective))
-        all_days_profile.append(day_profile_out)
-        dates_status += str([date,day_status])
-        dates_status += '\n'
 
-profile_out = pd.concat(all_days_profile)
-print(profile_out.shape)
-print(dates_status)
+profile_out, dates, bad_days, lpprob = lpf.optimise_range(
+    journeys, 
+    empty_profile, 
+    charger_power, 
+    site_capacity)
 
 range_profile, range_journeys, veh_profile, site_profile, days_summary, global_summary = of.summary_outputs(
    profile_out, 
@@ -79,8 +48,7 @@ range_profile, range_journeys, veh_profile, site_profile, days_summary, global_s
 
 print(global_summary)
 
-# Create all the outputs
-os.makedirs('Outputs/Logs/run{}'.format(run))
+################ OUTPUTS ####################
 
 # Make and save daily figures
 os.makedirs('Outputs/Logs/run{}/daily'.format(run))
@@ -98,44 +66,26 @@ range_fig.savefig(
     bbox_inches = "tight")
 plt.close(range_fig)
 
-# fig_BAU = of.summary_BAU_plot(site_summary)
-# fig_BAU.savefig(
-#     'Outputs/Logs/run{}/fig_BAU{}.svg'.format(run,run),
-#     bbox_inches = "tight")
-# plt.close(fig_BAU)
-
-# fig_scatter_outputs = of.scatter_plot(site_summary)
-# fig_scatter_outputs.savefig(
-#     'Outputs/Logs/run{}/opt_scatter{}.jpg'.format(run,run),
-#     bbox_inches = "tight")
-# plt.close(fig_scatter_outputs)
-
-# min_time = dt.datetime(2019,2,10,5,0,0)
-# max_time = dt.datetime(2019,2,10,23,30,0)
-# fig_journey_hist = of.histograms_journeys(day_journeys, min_time, max_time)
-# fig_journey_hist.savefig(
-#     'Outputs/Logs/run{}/journey_hist{}.jpg'.format(run,run),
-#     bbox_inches = "tight")
-# plt.close(fig_journey_hist)
  
 # Create a list of settings
 with open('global_variables.py','r') as f:
     global_variables = f.read()
 
-with open('Outputs/Logs/run{}/variables{}.csv'.format(run,run),'a') as f:
-    f.write(global_summary.to_string())
-    f.write('\nglobal_variabes.py:\n')
-    f.write(global_variables)
-    f.write(notes)
-    f.write(dates_status)
+with open('Outputs/Logs/run{}/variables{}.csv'.format(run,run),'a') as fi:
+    fi.write(global_summary.to_string())
+    fi.write('\nglobal_variabes.py:\n')
+    fi.write(global_variables)
+    fi.write(notes)
+    fi.write(bad_days)
 
 # Write problem to an .lp file
-PuLP_prob['opt'].writeLP("Outputs/Logs/run{}/multi_vehicle.lp".format(run))
+lpprob['opt'].writeLP("Outputs/Logs/run{}/multi_vehicle.lp".format(run))
 
 # Save dataframes
-range_profile.to_json(r'Outputs/Logs/run{}/route_profiles{}.json'.format(run,run))
-veh_profile.to_json(r'Outputs/Logs/run{}/veh_profiles{}.json'.format(run,run))
-range_journeys.to_json(r'Outputs/Logs/run{}/journeys{}.json'.format(run,run))
-site_profile.to_json(r'Outputs/Logs/run{}/site_summary{}.json'.format(run,run))
+pickle.dump(range_profile,open('Outputs/Logs/run{}/route_profiles{}'.format(run,run),'wb'))
+pickle.dump(veh_profile,open('Outputs/Logs/run{}/veh_profiles{}'.format(run,run),'wb'))
+pickle.dump(range_journeys,open('Outputs/Logs/run{}/journeys{}'.format(run,run),'wb'))
+pickle.dump(site_profile,open('Outputs/Logs/run{}/site_summary{}'.format(run,run),'wb'))
+pickle.dump(days_summary,open('Outputs/Logs/run{}/days_summary'.format(run),'wb'))
 
 print('Time:', gv.TIME_RANGE, time.process_time() - script_strt)

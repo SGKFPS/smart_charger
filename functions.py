@@ -57,9 +57,12 @@ def dumb_charging_no(journeys, eprice): # TODO am I using this?
 
 # Create a function to get daily data
 def get_daily_data(journeys,day):
-    daily_df = journeys.loc[(day)].copy()
-    daily_df.drop(columns=['Branch_ID'], inplace=True)
-    daily_df.sort_values(by=['Start_Time_of_Route'], inplace=True)
+    if journeys.index.isin([day.date()],level='date').any():
+        daily_df = journeys.loc[(day)].copy()
+        daily_df.drop(columns=['Branch_ID'], inplace=True)
+        daily_df.sort_values(by=['Start_Time_of_Route'], inplace=True)
+    else:
+        daily_df = pd.DataFrame(columns=['None'])
     return daily_df
 
 # Create function for one route, in one day

@@ -15,12 +15,12 @@ path_name_diesel = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\WEVC\Sm
 
 %% inputs
 initial_SoC = 1;
-charger_rating = [11,45];%[3.3,6.3,9.9,45];
+charger_rating = [22];%[3.3,6.3,9.9,11,45];
 
 journey_safety_margin = 0;
 inputsMatrix = [75;0.46;164;1000; 80];
 refrigeratorPowerConsumption = 0.5;
-year_chosen = 2019;
+year_chosen = 2019;%then 2020
 matrixSize = size(inputsMatrix,2);
 
 tic
