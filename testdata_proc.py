@@ -72,7 +72,7 @@ def get_prev_arrival(journeys):
 def remove_busy_routes(journeys):
     all_vehicles = journeys.groupby(['date','Vehicle_ID']).sum()
     busy_dates = all_vehicles[
-        all_vehicles['Energy_Required'] > gv.BATTERY_CAPACITY*0.8
+        all_vehicles['Energy_Required'] > gv.BATTERY_CAPACITY
         ].index
     bad_routes = []
     while len(busy_dates) > 0:
