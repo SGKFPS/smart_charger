@@ -22,6 +22,7 @@ VANS = {
         28, 32, 33, 36, 37, 40, 41
         ]
     }
+
 CATEGORY = 'PROT'
 CHARGER_EFF = 0.9
 BATTERY_CAPACITY = 75 #kWh

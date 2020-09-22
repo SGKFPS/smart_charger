@@ -432,3 +432,27 @@ Empty day:2019-11-18
 Empty day:2019-12-25
 Empty day:2020-02-02
 4669.796875
+66
+22
+250
+Output_Opt          3.287341e+05
+Output_BAU          3.287341e+05
+Output_BAU2         3.287341e+05
+ChDelivered_Opt     2.958607e+05
+ECost_Opt           1.921078e+06
+ChDelivered_BAU     2.958607e+05
+ECost_BAU           2.881218e+06
+ChDelivered_BAU2    2.958607e+05
+ECost_BAU2          2.881218e+06
+%BAU                3.332409e+01
+%BAU2               3.332409e+01
+Bad days:
+
+Empty day:2019-03-02
+Empty day:2019-07-28
+Empty day:2019-10-20
+Empty day:2019-10-29
+Empty day:2019-11-18
+Empty day:2019-12-25
+Empty day:2020-02-02
+4698.28125

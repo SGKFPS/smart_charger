@@ -10,11 +10,8 @@ import matplotlib.font_manager as font_manager
 # Creates summary columns and dataframes from outputs, for multiple days
 def summary_outputs(profile, journeys,dates):
     cols=gv.CAT_COLS
-    routes = journeys.index.get_level_values(1)
-    range_profile = profile.copy()
-    range_journeys = journeys.reset_index(level=0)
-    last_day = range_journeys.date.unique()[-1]
-    range_journeys = range_journeys[range_journeys.date != last_day]
+    vehicles = profile.index.get_level_values(1).unique()
+    range_profile = profile.fillna(0)
     for ca in gv.CATS:
         range_profile[cols['CHARGE_DEL'][ca]] = (
             range_profile[cols['OUTPUT'][ca]] 
@@ -22,35 +19,28 @@ def summary_outputs(profile, journeys,dates):
         range_profile[cols['ECOST'][ca]] = (
             range_profile[cols['OUTPUT'][ca]] 
             * range_profile[cols['PRICE']['opt']])
-        # TODO Remove SOC from here, add to optimiser. Add a reasonable SoC for the vehicle summary
-        # for route in routes:
-            # opt = (gv.BATTERY_CAPACITY - journeys.loc[(slice(None),route),'Energy_Required'] 
-            # + range_profile.loc[(slice(None),route),cols['CHARGE_DEL'][ca]].cumsum())*100 / gv.BATTERY_CAPACITY
-            # range_profile.loc[(slice(None),route),cols['SOC'][ca]] = opt
-
-        range_journeys[cols['OUTPUT'][ca]] = range_profile[cols['OUTPUT'][ca]].groupby(level=1).sum()
-        range_journeys[cols['ECOST'][ca]] = range_profile[cols['ECOST'][ca]].groupby(level=1).sum()
-        range_journeys[cols['PEAK'][ca]] = range_profile[cols['OUTPUT'][ca]].groupby(level=1).max()
-
-    # Aggregate per vehicle, time
-    veh_profile = range_profile.groupby(['from','Vehicle_ID']).sum()
-    veh_profile['Electricity_Price'] = range_profile[['Electricity_Price','Vehicle_ID']].groupby(['from','Vehicle_ID']).mean()
-    veh_profile.drop(columns=[cols['PRICE']['BAU']], inplace=True)
+        for vehicle in vehicles:
+            range_profile.loc[(slice(None),vehicle),cols['SOC'][ca]] = (
+                gv.BATTERY_CAPACITY
+                + range_profile.loc[(slice(None),vehicle),cols['CHARGE_DEL'][ca]].cumsum() 
+                + range_profile.loc[(slice(None),vehicle),'Battery_Use'].cumsum()
+                )*100/gv.BATTERY_CAPACITY
 
     # Sum all vehicles, per time period
-    site = veh_profile.groupby(level=0).sum()
-    site[cols['PRICE']['opt']] = veh_profile[cols['PRICE']['opt']].groupby(level=0).mean()
+    site = range_profile.groupby(level=0).sum()
+    site[cols['PRICE']['opt']] = range_profile[cols['PRICE']['opt']].groupby(level=0).mean()
+    site.drop(columns=[cols['PRICE']['BAU']], inplace=True)
     for ca in gv.CATS:
-        #site[cols['SOC'][ca]] = day_profile[cols['SOC'][ca]].groupby(level=0).mean()
-        site[cols['NUM'][ca]] = veh_profile[cols['OUTPUT'][ca]].astype(bool).groupby(level=0).sum()
+        site[cols['SOC'][ca]] = range_profile[cols['SOC'][ca]].groupby(level=0).mean()
+        site[cols['NUM'][ca]] = range_profile[cols['OUTPUT'][ca]].astype(bool).groupby(level=0).sum()
 
     # Daily summaries 
     site['date'] = site.index.date - (
         site.index.time < gv.CHAR_ST).astype(int) * dt.timedelta(days=1)
     day_summary = site.groupby('date').sum()
-    day_summary.drop(columns=[cols['PRICE']['opt']], inplace=True)
+    day_summary.drop(columns=[cols['PRICE']['opt'],'Available'], inplace=True)
     for ca in gv.CATS:
-        day_summary.drop(columns=[cols['NUM'][ca]], inplace=True)
+        day_summary.drop(columns=[cols['NUM'][ca],cols['SOC'][ca]], inplace=True)
     day_summary['%BAU'] = 100 * (
         day_summary['ECost_BAU'] - day_summary['ECost_Opt']
         )/day_summary['ECost_BAU']
@@ -69,7 +59,7 @@ def summary_outputs(profile, journeys,dates):
     global_summary['%BAU2'] = 100 * (
         global_summary['ECost_BAU2'] - global_summary['ECost_Opt']
         )/global_summary['ECost_BAU2']
-    return range_profile, range_journeys, veh_profile, site, day_summary, global_summary
+    return range_profile, site, day_summary, global_summary
 
 # Creates summary plot
 def summary_plot(site_summary):
@@ -99,11 +89,11 @@ def summary_plot(site_summary):
             site_summary[cols['ECOST'][ca]]/100, 
             label=ca, 
             color=gv.COLOR[ca])
-        # axs[3].plot(
-        #     x, 
-        #     site_summary[cols['SOC'][ca]], 
-        #     label=gv.LABELS[ca], 
-        #     color=gv.COLOR[ca])
+        axs[3].plot(
+            x, 
+            site_summary[cols['SOC'][ca]], 
+            label=gv.LABELS[ca], 
+            color=gv.COLOR[ca])
 
     axs[4].plot(x, 
     site_summary[cols['PRICE']['opt']], 
@@ -186,7 +176,7 @@ def summary_BAU_plot(site_summary):
 
     for ca in cats:
         axs[0].plot(x, site_summary[cols['OUTPUT'][ca]],color=gv.COLOR[ca])
-        axs[1].plot(x, site_summary[cols['SOC'][ca]],color=gv.COLOR[ca])
+        #axs[1].plot(x, site_summary[cols['SOC'][ca]],color=gv.COLOR[ca])
 
     axs[0].set_ylabel('Site output (kW)')
     axs[1].set_ylabel('SoC (%)')
