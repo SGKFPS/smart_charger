@@ -3,29 +3,29 @@
 %%% night
 
 %% Directories
-savedir1 = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\';
-allCasesVerticalOutputdir = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
+savedir1 = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\';
+allCasesVerticalOutputdir = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
 
 %% (.mat) files name
-branch_idindex_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\branch_idindex_file_allCasesAllocCharging.mat';
-branch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\branch_id_file_allCasesAllocCharging.mat';
-sortbranch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\sortbranch_id_file_allCasesAllocCharging.mat';
-path_name_ev = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\ev_vansNum_test.mat';
-path_name_diesel = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\diesel_vansNum_test.mat';
+branch_idindex_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\branch_idindex_file_allCasesAllocCharging.mat';
+branch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\branch_id_file_allCasesAllocCharging.mat';
+sortbranch_id_file = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\sortbranch_id_file_allCasesAllocCharging.mat';
+path_name_ev = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\ev_vansNum_test.mat';
+path_name_diesel = 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\diesel_vansNum_test.mat';
 
 %% inputs
 initial_SoC = 1;
-charger_rating = [22];%[3.3,6.3,9.9,11,45];
+charger_rating = [45];%[3.3,6.3,9.9,11,22,45];
 
 journey_safety_margin = 0;
 inputsMatrix = [75;0.46;164;1000; 80];
 refrigeratorPowerConsumption = 0.5;
-year_chosen = 2020;%then 2020
+year_chosen = 2019;
 matrixSize = size(inputsMatrix,2);
 
 tic
 
- data = readtable('select_journey_data.csv');
+ data = readtable('cleaned_route_data_all_11022020.csv');
     journeysall = sortrows(data,'Branch_ID');
     journeysall = journeysall(year(journeysall.Start_Date_of_Route)==year_chosen,:);
 
@@ -497,7 +497,7 @@ simjAll = [];
     end     
 %   
   %% Save output files in folders
-cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\'
+cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\'
 
 %%-------------- EV80 ---------------------
 % copyfile *95.94_* ev80/.
@@ -571,7 +571,7 @@ copyfile *164_newstoreE_* Vivaro_storeE/.
 %%-------------------------------------------------------------
 
 %% Save charging output files (vertical concatenation)
-cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200920\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
+cd 'C:\Users\Sofia\OneDrive - Flexible Power Systems Ltd\dev\Smart_charging_prototypes\Allocation_scripts\Outputs_20200922\allCasesAllocCharging\allCasesVerticalOutputAddedColumns\';
 copyfile *new_allCasesVerticalOutputFile* allCasesChargingVerticalOutputs/.
 
 toc

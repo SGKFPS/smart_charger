@@ -3,7 +3,7 @@
 
 import datetime as dt
 
-NUM_VEHICLES = 20
+NUM_VEHICLES = 5
 TIME_INT = dt.timedelta(minutes = 30)
 START_DT = dt.datetime(2019,1,31,0,0,0)
 TIME_RANGE = dt.timedelta(weeks=52,days=4)

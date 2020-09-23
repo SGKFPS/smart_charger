@@ -63,10 +63,11 @@ def summary_outputs(profile, journeys,dates):
 
 # Creates summary plot
 def summary_plot(site_summary):
-    fig, axs = plt.subplots(5,
-    figsize=(12,10),
-    sharex=True, 
-    gridspec_kw={'hspace':0.1})
+    fig, axs = plt.subplots(
+        5,
+        figsize=(12,10),
+        sharex=True, 
+        gridspec_kw={'hspace':0.1})
 
     x = site_summary.index.strftime('%H:%M')
     cats = gv.CATS
@@ -232,18 +233,21 @@ def histograms_journeys(day_journeys, min_time, max_time):
         + 1)
     bins_time = [min_time + i * gv.TIME_INT for i in range(num_bins)]
 
-    fig, ax = plt.subplots(1,
-    figsize=(6,2))
-    ax.hist(day_journeys['Start_Time_of_Route'], 
-    bins=bins_time,
-    color=gv.FPS_BLUE,
-    alpha=0.6,
-    label='Departures')
-    ax.hist(day_journeys['End_Time_of_Route'], 
-    bins=bins_time,
-    color=gv.FPS_GREEN,
-    alpha=0.6,
-    label='Arrivals')
+    fig, ax = plt.subplots(
+        1,
+        figsize=(6,2))
+    ax.hist(
+        day_journeys['Start_Time_of_Route'], 
+        bins=bins_time,
+        color=gv.FPS_BLUE,
+        alpha=0.6,
+        label='Departures')
+    ax.hist(
+        day_journeys['End_Time_of_Route'], 
+        bins=bins_time,
+        color=gv.FPS_GREEN,
+        alpha=0.6,
+        label='Arrivals')
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%H'))
     ax.legend(frameon=False)
     ax.set_xlabel('Time interval', color=gv.FPS_BLUE, fontweight='bold')

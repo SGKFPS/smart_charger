@@ -65,7 +65,7 @@ def get_prev_arrival(journeys):
         for idx in van_journeys.index:
             van_journeys.loc[idx, 'Previous_Arrival'] = previous_arrival
             previous_arrival = van_journeys.loc[idx, 'End_Time_of_Route']
-        van_journeys_list.append(van_journeys)
+        
     return pd.concat(van_journeys_list)
 
 # Removes routes that require more than the battery capacity
