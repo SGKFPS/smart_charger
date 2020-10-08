@@ -5,9 +5,10 @@ import datetime as dt
 
 NUM_VEHICLES = 5
 TIME_INT = dt.timedelta(minutes = 30)
-START_DT = dt.datetime(2019,1,31,0,0,0)
-TIME_RANGE = dt.timedelta(weeks=52,days=4)
-DAY = dt.datetime(2019,1,31)
+START_DT = dt.datetime(2019,3,5,0,0,0)
+#TIME_RANGE = dt.timedelta(weeks=52,days=4)
+TIME_RANGE = dt.timedelta(weeks=1,days=0)
+DAY = dt.datetime(2019,3,5)
 # CHARGER_POWER = 22 # kW
 CATS = ['opt','BAU','BAU2']
 VANS = {
@@ -98,8 +99,8 @@ LABELS = {
     'BAU': 'Unconstrained benchmark',
     'BAU2': 'Constrained benchmark'
  }
-data_path = r"Data/JPL_allocation/Vivaro/*.csv"
-pricing_path = r"Data/Octopus Agile Rates_2019_LON.csv"
+data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.csv"
+pricing_path = r"Inputs/Octopus Agile Rates_2019_LON.csv"
 
 # Column names
 SOC = {} 

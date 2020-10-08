@@ -23,6 +23,7 @@ def prep_data(path, category):
     journeys = limit_vehicles_multishift(journeys, category)
     journeys['End_Time_of_Route']=pd.to_datetime(journeys['End_Time_of_Route'])
     journeys = remove_busy_routes(journeys)
+    print(journeys.shape)
     journeys = get_prev_arrival(journeys)
     journeys.sort_values(by = ['date','Route_ID'], inplace=True)
     journeys.set_index(['date','Route_ID'],inplace=True)
@@ -65,7 +66,7 @@ def get_prev_arrival(journeys):
         for idx in van_journeys.index:
             van_journeys.loc[idx, 'Previous_Arrival'] = previous_arrival
             previous_arrival = van_journeys.loc[idx, 'End_Time_of_Route']
-        
+        van_journeys_list.append(van_journeys)
     return pd.concat(van_journeys_list)
 
 # Removes routes that require more than the battery capacity

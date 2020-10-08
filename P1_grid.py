@@ -19,7 +19,7 @@ import random
 import os
 
 # Variables for grid search
-run = 68
+run = 69
 charger_power = [22]#, 45, 11, 7] # kW
 caps = [80]#,500] #100 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
@@ -88,7 +88,7 @@ for charger in charger_power:
             fi.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
             fi.write(global_summary.to_string())
             fi.write(bad_days)
-            fi.write('\n \n global_variabes.py:\n')
+            fi.write('\n \n global_variables.py:\n')
             fi.write(global_variables)
 
         # Write problem to an .lp file
