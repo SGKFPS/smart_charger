@@ -4,13 +4,23 @@
 import datetime as dt
 
 NUM_VEHICLES = 5
+NUM_FAST_CH = 2
 TIME_INT = dt.timedelta(minutes = 30)
-START_DT = dt.datetime(2019,3,5,0,0,0)
+START_DT = dt.datetime(2019,1,31,0,0,0)
 #TIME_RANGE = dt.timedelta(weeks=52,days=4)
 TIME_RANGE = dt.timedelta(weeks=1,days=0)
-DAY = dt.datetime(2019,3,5)
+DAY = dt.datetime(2019,1,31)
 # CHARGER_POWER = 22 # kW
+CHARGER_EFF = 0.9
+BATTERY_CAPACITY = 75 #kWh
+MARGIN_SOC = 0.1 # Required SOC will be 10% more than planned
 CATS = ['opt','BAU','BAU2']
+CHAR_ST = dt.time(11, 0,0) # 11 am is start of charging period each day #FIXME Make this data dependent
+CHAR_ST_DELTA = dt.timedelta(hours=11)
+DAY_INTERVALS = 48
+
+
+
 VANS = {
     'PROT': [
         3, 4, 6, 11, 12, 14, 
@@ -25,9 +35,6 @@ VANS = {
     }
 
 CATEGORY = 'PROT'
-CHARGER_EFF = 0.9
-BATTERY_CAPACITY = 75 #kWh
-
 NUM_CHARGERS = NUM_VEHICLES
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
 #POWER_INT = CHARGER_POWER * TIME_FRACT
@@ -37,11 +44,7 @@ TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
 #     'BAU': 10000,
 #     'BAU2': 50
 #  }
-CHAR_ST = dt.time(11, 0,0) # 11 am is start of charging period each day #FIXME Make this data dependent
-CHAR_ST_DELTA = dt.timedelta(hours=11)
 
-
-DAY_INTERVALS = 48
 IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
                 'End_Time_of_Route', 'Energy_Required','vannumber_ev_'] 
 

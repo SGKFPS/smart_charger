@@ -19,9 +19,9 @@ import random
 import os
 
 # Variables for grid search
-run = 69
-charger_power = [22]#, 45, 11, 7] # kW
-caps = [80]#,500] #100 300 100 200
+run = 84
+charger_power = [22,11,7]#, 45, 11, 7] # kW
+caps = [25,30,35,40]#,500] #100 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
 journeys = pickle.load(open('Outputs/journeys_range','rb'))
 empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
@@ -35,11 +35,12 @@ for charger in charger_power:
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = 'Test with SOC in optimisation'
+        notes = """5 vehicle test with optimise_range2 / linear_optimiser_V3, 
+        lower cap. Full empty profile."""
         os.makedirs('Outputs/Logs/run{}'.format(run))
         grid_file = open(grid_file_path,'a')
         grid_file.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
-        profile_out, dates, bad_days, lpprob = lpf.optimise_range(
+        profile_out, dates, bad_days, lpprob = lpf.optimise_range2(
             empty_profile, 
             charger, 
             site_capacity)
@@ -57,7 +58,7 @@ for charger in charger_power:
             day_profile = of.create_daily_summary(site_profile, day)
             fig_summary = of.summary_plot(day_profile)
             fig_summary.savefig(
-                'Outputs/Logs/run{}/daily/fig{}.svg'.format(run,date))
+                'Outputs/Logs/run{}/daily/fig{}.jpg'.format(run,date))
             plt.close(fig_summary)
             # #BAU plot #FIXME
             # fig_BAU = of.summary_BAU_plot(day_profile)

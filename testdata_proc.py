@@ -10,6 +10,7 @@ import pickle
 import global_variables as gv
 import functions as f
 import random
+import time
 
 def prep_data(path, category):
     all_files = glob.glob(path)
@@ -70,7 +71,7 @@ def get_prev_arrival(journeys):
     return pd.concat(van_journeys_list)
 
 # Removes routes that require more than the battery capacity
-def remove_busy_routes(journeys):
+def remove_busy_routes(journeys): #FIXME just remove busy journeys, not whole days
     all_vehicles = journeys.groupby(['date','Vehicle_ID']).sum()
     busy_dates = all_vehicles[
         all_vehicles['Energy_Required'] > gv.BATTERY_CAPACITY
@@ -109,6 +110,7 @@ def clean_pricing(path):
     pricing['from'] = pd.to_datetime(pricing['date'] + " " + pricing['from'])
     pricing['to'] = pd.to_datetime(pricing['date'] + " " + pricing['to'])
     pricing['Time_Price'] = list(range(len(pricing)))
+    pricing['Time_Price'] = pricing['Time_Price']/1000
     pricing.rename(columns={'unit_rate_excl_vat':'Electricity_Price'}, inplace=True)
     return pricing
 
@@ -118,7 +120,9 @@ journeys_range = get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
 print('Range journeys done')
 price_data = clean_pricing(gv.pricing_path)
 print('Prices done')
+script_strt = time.process_time()
 empty_profile = f.create_empty_schedule(journeys_range, price_data)
+print(time.process_time() - script_strt)
 print('Profiles done')
 
 # # Pickle
@@ -126,4 +130,3 @@ pickle.dump(all_journeys,open('Outputs/all_journeys','wb'))
 pickle.dump(journeys_range,open('Outputs/journeys_range','wb'))
 pickle.dump(price_data,open('Outputs/price_data','wb'))
 pickle.dump(empty_profile,open('Outputs/empty_profile','wb'))
-
