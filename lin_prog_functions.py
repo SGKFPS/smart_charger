@@ -342,11 +342,11 @@ def optimise_range2(empty_profile, charger, capacity):
     profile_out = pd.concat(all_days_profile)
     return profile_out, dates, bad_days, PuLP_prob
 
-# Passes incomplete SoC to next day
 def linear_optimiser_V3(profile,ca,charger,capacity,rel_charge,next_req):
     """Linear optimisation for a single day charging
 
-    This optimiser uses PuLP to find optimal power outputs over a day.
+    This optimiser uses PuLP to find optimal power outputs over a day. 
+    Passes incomplete SoC to next day
     Objective: reduce overall electricity spend
     Constraint 1: get to 100% final SOC before end of time period of next day departures
     Constraint 2: not go below 0% or over 100% battery charge
@@ -456,8 +456,7 @@ def linear_optimiser_V3(profile,ca,charger,capacity,rel_charge,next_req):
         + profile.groupby('Vehicle_ID').sum()['Battery_Use'] )
     return df, prob, final_soc, note
 
-# Charge to next day's required SOC
-def charge_tonextday(profile,ca,charger,capacity,rel_charge,next_req):
+def charge_tonextday(profile,ca,charger1,charger2,capacity,rel_charge,next_req):
     """Optimise charging when 100% is unfeasible
     
     The objective of this function is to charge vehicles to have enough
@@ -466,7 +465,8 @@ def charge_tonextday(profile,ca,charger,capacity,rel_charge,next_req):
     Args:
         profile (DataFrame): empty profile of a single day
         ca (str): category to use in optimisation (opt, BAU)
-        charger (int): charger power
+        charger1 (int): slow charger power
+        charger2 (int): fast charger power
         capacity (int): max allowed site capacity
         rel_charge (Series): list of intial battery charge state relative to full. 
             Index are Vehicle_ID
@@ -478,16 +478,24 @@ def charge_tonextday(profile,ca,charger,capacity,rel_charge,next_req):
     profile_av = profile[profile['Available'] == 1]
     price_col = gv.CAT_COLS['PRICE'][ca]
     output_col = gv.CAT_COLS['OUTPUT'][ca]
+    ch_col = gv.CAT_COLS['CH_TYPE'][ca]
     vehicles = profile.index.get_level_values(1).unique()
     time_periods = profile_av.index.get_level_values(0).unique()
+    sessions = profile['Session'].unique()
     # Define output variable
     outputs = LpVariable.dicts(
         "output",
         ((period, vehicle) for period, vehicle in profile_av.index),
         lowBound = 0,
-        upBound = charger * gv.TIME_FRACT,
+        upBound = charger2 * gv.TIME_FRACT,
         cat = "Continuous"
         )
+    # Define choice of charger variable
+    ch_assignment = LpVariable.dicts(
+        "Charger",
+        (session for session in sessions),
+        cat = 'Binary'
+    )
     note=''
     # Create the 'prob' variable to contain the problem data
     prob = LpProblem("Charge to next day reqs",LpMinimize)
@@ -497,6 +505,12 @@ def charge_tonextday(profile,ca,charger,capacity,rel_charge,next_req):
         [(profile_av.loc[(period, vehicle), price_col] -100 )* outputs[period, vehicle] 
         for period, vehicle in profile_av.index]
         ), "Total Charging costs + Total Outputs"
+
+    # Charge power constraint
+    for period, vehicle in profile_av.index:
+        prob += outputs[period, vehicle] <= ((charger1 
+        + ch_assignment[profile_av.loc[(period,vehicle),'Session']] * (charger2-charger1))
+            * gv.TIME_FRACT)
 
     # Final SOC constraint
     for vehicle in vehicles:
@@ -522,14 +536,151 @@ def charge_tonextday(profile,ca,charger,capacity,rel_charge,next_req):
             ) + cumul_use + rel_charge[vehicle]<= 0
             prob += lpSum( # Doesn't go below 0% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle]>= -gv.BATTERY_CAPACITY + charger * gv.TIME_FRACT
+            ) + cumul_use + rel_charge[vehicle] >= (
+                -gv.BATTERY_CAPACITY + gv.TIME_FRACT * (charger1
+                + ch_assignment[profile_av.loc[(period,vehicle),'Session']] 
+                * (charger2-charger1)))
 
     # Max capacity constraint
     n = len(time_periods.unique())
     for period in time_periods:
-        time_routes = list(profile_av.loc[period].index)
+        time_veh = list(profile_av.loc[period].index) # Selects the vehicles available at time
         prob += lpSum(
-            [outputs[period, route] for route in time_routes]) <= capacity[ca]* gv.TIME_FRACT
+            [outputs[period, vehicle] for vehicle in time_veh]) <= capacity[ca]* gv.TIME_FRACT
+        prob += lpSum(
+            [ch_assignment[profile_av.loc[(period,vehicle),'Session']] for vehicle in time_veh]
+            ) <= gv.NUM_FAST_CH
+
+    # Solve and print to the screen
+    prob.solve()
+    print(ca, "Next required charge status:", LpStatus[prob.status])
+    if prob.status ==-1:
+        print('Magic!!')
+        note += '\nMagic!' # TODO change this to go first to breach scenario
+        df = magic_charging(profile,ca,rel_charge)
+    else:
+        # Get output variables
+        charge_output = []
+        for period, route in outputs:
+            if prob.status == 1:
+                x =  outputs[(period, route)].varValue
+            else:
+                x = 0
+            var_output = {
+                'from': period,
+                'Vehicle_ID': route,
+                output_col: x
+            }
+            charge_output.append(var_output)
+
+        df = pd.DataFrame.from_records(charge_output).sort_values(['from','Vehicle_ID'])
+        df.set_index(['from', 'Vehicle_ID'], inplace=True)
+        print('Cost:', value(prob.objective))
+    return df, note
+
+def charge_tonextday_breach(profile,ca,charger1,charger2,capacity,rel_charge,next_req):
+    """Optimise charging breaching site capacity
+    
+    The objective of this function is to charge vehicles to have enough
+    for next day's journeys + 10% at the cheapest price and deliver as much charge as possible.
+    This method allows breaching site capacity (up to a limit)
+
+    Args:
+        profile (DataFrame): empty profile of a single day
+        ca (str): category to use in optimisation (opt, BAU)
+        charger1 (int): slow charger power
+        charger2 (int): fast charger power
+        capacity (int): max allowed site capacity
+        rel_charge (Series): list of intial battery charge state relative to full. 
+            Index are Vehicle_ID
+        next_req (Series): battery requirements for next day per vehicle
+
+    Returns:
+        DataFrame: outputs per time period
+    """
+    profile_av = profile[profile['Available'] == 1]
+    price_col = gv.CAT_COLS['PRICE'][ca]
+    output_col = gv.CAT_COLS['OUTPUT'][ca]
+    ch_col = gv.CAT_COLS['CH_TYPE'][ca]
+    vehicles = profile.index.get_level_values(1).unique()
+    time_periods = profile_av.index.get_level_values(0).unique()
+    sessions = profile['Session'].unique()
+    # Define output variable
+    outputs = LpVariable.dicts(
+        "output",
+        ((period, vehicle) for period, vehicle in profile_av.index),
+        lowBound = 0,
+        upBound = charger2 * gv.TIME_FRACT,
+        cat = "Continuous"
+        )
+    # Define choice of charger variable
+    ch_assignment = LpVariable.dicts(
+        "Charger",
+        (session for session in sessions),
+        cat = 'Binary'
+    )
+    # Select time periods that breach site capacity
+    time_breaches = LpVariable.dicts(
+        "Breach",
+        (time for time in time_periods),
+        cat = 'Binary'
+    )
+    note=''
+    # Create the 'prob' variable to contain the problem data
+    prob = LpProblem("Charge to next day reqs, breach cap",LpMinimize)
+
+    # Add costs to objective function
+    prob += lpSum(
+        [(profile_av.loc[(period, vehicle), price_col] -100 )* outputs[period, vehicle] 
+        for period, vehicle in profile_av.index]
+        ), "Total Charging costs + Total Outputs"
+
+    # Charge power constraint
+    for period, vehicle in profile_av.index:
+        prob += outputs[period, vehicle] <= ((charger1 
+        + ch_assignment[profile_av.loc[(period,vehicle),'Session']] * (charger2-charger1))
+            * gv.TIME_FRACT)
+
+    # Final SOC constraint
+    for vehicle in vehicles:
+        # Get profile for single vehicle
+        vehicle_prof = profile_av.loc[(slice(None),vehicle),'Battery_Use']
+        prob += lpSum(
+            [outputs[period,vehicle] * gv.CHARGER_EFF for period, vehicle in vehicle_prof.index]
+        ) >= - (
+            profile.loc[(slice(None),vehicle),'Battery_Use'].sum()# Power used that day
+            + rel_charge[vehicle]# Initial missing charge
+            + gv.BATTERY_CAPACITY # Back to 0% charge
+            + next_req.loc[vehicle]
+        )
+
+    # Intermediate SOC constraints
+    for vehicle in vehicles:
+        vehicle_prof = profile_av.loc[(slice(None),vehicle),'Battery_Use']
+        for period in vehicle_prof.index.get_level_values(0):
+            cumul_use = profile.loc[(slice(period),vehicle),'Battery_Use'].sum()
+            cumul_profile = profile_av.loc[(slice(period),vehicle),'Battery_Use']
+            prob += lpSum( # Doesn't go over 100% SOC
+                [outputs[period, vehicle] * gv.CHARGER_EFF for period, vehicle in cumul_profile.index]
+            ) + cumul_use + rel_charge[vehicle]<= 0
+            prob += lpSum( # Doesn't go below 0% SOC
+                [outputs[period, vehicle] * gv.CHARGER_EFF for period, vehicle in cumul_profile.index]
+            ) + cumul_use + rel_charge[vehicle] >= (
+                -gv.BATTERY_CAPACITY + gv.TIME_FRACT * (charger1
+                + ch_assignment[profile_av.loc[(period,vehicle),'Session']] 
+                * (charger2-charger1)))
+
+    # Max capacity constraint
+    #TODO change here
+    n = len(time_periods.unique())
+    for period in time_periods:
+        time_veh = list(profile_av.loc[period].index) # Selects the vehicles available at time
+        prob += lpSum(
+            [outputs[period, vehicle] for vehicle in time_veh]) <= capacity[ca]* gv.TIME_FRACT
+        prob += lpSum(
+            [ch_assignment[profile_av.loc[(period,vehicle),'Session']] for vehicle in time_veh]
+            ) <= gv.NUM_FAST_CH
+
     # Solve and print to the screen
     prob.solve()
     print(ca, "Next required charge status:", LpStatus[prob.status])
@@ -558,17 +709,18 @@ def charge_tonextday(profile,ca,charger,capacity,rel_charge,next_req):
     return df, note
 
 # Incomplete charging when 100% unfeasible
-def charge_incomplete(profile,ca,charger,capacity,rel_charge):
+def charge_incomplete(profile,ca,charger1,charger2,capacity,rel_charge):
     """Optimise charging when 100% is unfeasible
     
     The objective of this function is to deliver as much charge as possible
     without accounting for required final SOC. If this is unfeasible, it will go 
-    to magic charging
+    to magic charging.
 
     Args:
         profile (DataFrame): empty profile of a single day
         ca (str): category to use in optimisation (opt, BAU)
-        charger (int): charger power
+        charger1 (int): slow charger power
+        charger2 (int): fast charger power
         capacity (int): max allowed site capacity
         rel_charge (Series): list of intial battery charge state relative to full. 
             Index are Vehicle_ID
@@ -579,16 +731,23 @@ def charge_incomplete(profile,ca,charger,capacity,rel_charge):
     profile_av = profile[profile['Available'] == 1]
     price_col = gv.CAT_COLS['PRICE'][ca]
     output_col = gv.CAT_COLS['OUTPUT'][ca]
+    ch_col = gv.CAT_COLS['CH_TYPE'][ca]
     vehicles = profile.index.get_level_values(1).unique()
     time_periods = profile_av.index.get_level_values(0).unique()
+    sessions = profile['Session'].unique()
     # Define output variable
     outputs = LpVariable.dicts(
         "output",
         ((period, vehicle) for period, vehicle in profile_av.index),
         lowBound = 0,
-        upBound = charger * gv.TIME_FRACT,
+        upBound = charger2 * gv.TIME_FRACT,
         cat = "Continuous"
         )
+    ch_assignment = LpVariable.dicts(
+        "Charger",
+        (session for session in sessions),
+        cat = 'Binary'
+    )
 
     # Create the 'prob' variable to contain the problem data
     prob = LpProblem("Multiple_route_scheduling",LpMaximize)
@@ -597,6 +756,12 @@ def charge_incomplete(profile,ca,charger,capacity,rel_charge):
     prob += lpSum(
         [outputs[period, vehicle] for period, vehicle in profile_av.index]
         ), "Total Charging"
+
+    # Charge power constraint
+    for period, vehicle in profile_av.index:
+        prob += outputs[period, vehicle] <= ((charger1 
+        + ch_assignment[profile_av.loc[(period,vehicle),'Session']] * (charger2-charger1))
+            * gv.TIME_FRACT)
 
     # Intermediate SOC constraints
     for vehicle in vehicles:
@@ -609,14 +774,20 @@ def charge_incomplete(profile,ca,charger,capacity,rel_charge):
             ) + cumul_use + rel_charge[vehicle]<= 0
             prob += lpSum( # Doesn't go below 0% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle]>= -gv.BATTERY_CAPACITY + charger * gv.TIME_FRACT
+            ) + cumul_use + rel_charge[vehicle] >= (
+                -gv.BATTERY_CAPACITY + gv.TIME_FRACT * (charger1
+                + ch_assignment[profile_av.loc[(period,vehicle),'Session']] 
+                * (charger2-charger1)))
 
     # Max capacity constraint
     n = len(time_periods.unique())
     for period in time_periods:
-        time_routes = list(profile_av.loc[period].index)
+        time_veh = list(profile_av.loc[period].index) # Selects the vehicles available at time
         prob += lpSum(
-            [outputs[period, route] for route in time_routes]) <= capacity[ca]* gv.TIME_FRACT
+            [outputs[period, vehicle] for vehicle in time_veh]) <= capacity[ca]* gv.TIME_FRACT
+        prob += lpSum(
+            [ch_assignment[profile_av.loc[(period,vehicle),'Session']] for vehicle in time_veh]
+            ) <= gv.NUM_FAST_CH
 
     # Solve and print to the screen
     prob.solve()
@@ -627,15 +798,17 @@ def charge_incomplete(profile,ca,charger,capacity,rel_charge):
     else:
         # Get output variables
         charge_output = []
-        for period, route in outputs:
+        for period, vehicle in outputs:
             if prob.status == 1:
-                x =  outputs[(period, route)].varValue
+                x =  outputs[(period, vehicle)].varValue
+                y = ch_assignment[profile_av.loc[(period,vehicle),'Session']].varValue
             else:
                 x = 0
             var_output = {
                 'from': period,
-                'Vehicle_ID': route,
-                output_col: x
+                'Vehicle_ID': vehicle,
+                output_col: x,
+                ch_col: y
             }
             charge_output.append(var_output)
 
@@ -675,7 +848,7 @@ def magic_charging(profile,ca,rel_charge):
         profile_av.loc[idx,output_col] = req_output.loc[idx[1]]
     return profile_av[[output_col]]
 
-def linear_optimiser_V4(profile,ca,charger1,charger2,capacity,rel_charge,next_req):#TODO: add mix of chargers here
+def linear_optimiser_V4(profile,ca,charger1,charger2,capacity,rel_charge,next_req):
     """Linear optimisation for a single day charging
 
     This optimiser uses PuLP to find optimal power outputs over a day.
@@ -706,8 +879,11 @@ def linear_optimiser_V4(profile,ca,charger1,charger2,capacity,rel_charge,next_re
     profile_av = profile[profile['Available'] == 1]
     price_col = gv.CAT_COLS['PRICE'][ca]
     output_col = gv.CAT_COLS['OUTPUT'][ca]
+    ch_col = gv.CAT_COLS['CH_TYPE'][ca]
     vehicles = profile.index.get_level_values(1).unique()
     time_periods = profile_av.index.get_level_values(0).unique()
+    sessions = profile['Session'].unique()
+    
     # Define output variable
     outputs = LpVariable.dicts(
         "output",
@@ -718,7 +894,7 @@ def linear_optimiser_V4(profile,ca,charger1,charger2,capacity,rel_charge,next_re
         )
     ch_assignment = LpVariable.dicts(
         "Charger",
-        (vehicle for vehicle in vehicles),
+        (session for session in sessions),
         cat = 'Binary'
     )
     note = ''
@@ -733,12 +909,9 @@ def linear_optimiser_V4(profile,ca,charger1,charger2,capacity,rel_charge,next_re
 
     # Charge power constraint
     for period, vehicle in profile_av.index:
-        prob += outputs[period, vehicle] <= (
-            (charger1 + ch_assignment[vehicle] * (charger2-charger1))
+        prob += outputs[period, vehicle] <= ((charger1 
+        + ch_assignment[profile_av.loc[(period,vehicle),'Session']] * (charger2-charger1))
             * gv.TIME_FRACT)
-
-    prob += lpSum(
-        [ch_assignment[vehicle] for vehicle in vehicles]) == gv.NUM_FAST_CH
 
     # Final SOC constraint
     for vehicle in vehicles:
@@ -762,37 +935,43 @@ def linear_optimiser_V4(profile,ca,charger1,charger2,capacity,rel_charge,next_re
             ) + cumul_use + rel_charge[vehicle]<= 0
             prob += lpSum( # Doesn't go below 0% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle]>= -gv.BATTERY_CAPACITY + charger1 * gv.TIME_FRACT
+            ) + cumul_use + rel_charge[vehicle] >= (
+                -gv.BATTERY_CAPACITY + gv.TIME_FRACT * (charger1
+                + ch_assignment[profile_av.loc[(period,vehicle),'Session']] 
+                * (charger2-charger1)))
 
     # Max capacity constraint
     n = len(time_periods.unique())
     for period in time_periods:
-        time_routes = list(profile_av.loc[period].index)
+        time_veh = list(profile_av.loc[period].index) # Selects the vehicles available at time
         prob += lpSum(
-            [outputs[period, route] for route in time_routes]) <= capacity[ca]* gv.TIME_FRACT
+            [outputs[period, vehicle] for vehicle in time_veh]) <= capacity[ca]* gv.TIME_FRACT
+        prob += lpSum(
+            [ch_assignment[profile_av.loc[(period,vehicle),'Session']] for vehicle in time_veh]
+            ) <= gv.NUM_FAST_CH
 
     # Solve and print to the screen
     prob.solve()
     print(ca, "status:", LpStatus[prob.status])
     # If unfeasible, tries to 
     if  prob.status == -1:
-        df, note2 = charge_tonextday(profile,ca,charger1,capacity,rel_charge,next_req)
+        df, note2 = charge_tonextday(profile,ca,charger1,charger2,capacity,rel_charge,next_req)
         note += '\nMain unfeasible'
         note += note2
     else:
         # Get output variables
         charge_output = []
-        for period, route in outputs:
+        for period, vehicle in outputs:
             if prob.status == 1:
-                x =  outputs[(period, route)].varValue
-                y = ch_assignment[route].varValue
+                x =  outputs[(period, vehicle)].varValue
+                y = ch_assignment[profile_av.loc[(period,vehicle),'Session']].varValue
             else:
                 x = 0
             var_output = {
                 'from': period,
-                'Vehicle_ID': route,
+                'Vehicle_ID': vehicle,
                 output_col: x,
-                'Ch':y
+                ch_col: y
             }
             charge_output.append(var_output)
 

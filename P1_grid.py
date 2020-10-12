@@ -60,18 +60,12 @@ for charger in charger_power:
             fig_summary.savefig(
                 'Outputs/Logs/run{}/daily/fig{}.jpg'.format(run,date))
             plt.close(fig_summary)
-            # #BAU plot #FIXME
-            # fig_BAU = of.summary_BAU_plot(day_profile)
-            # fig_BAU.savefig(
-            #     'Outputs/Logs/run{}/fig_BAU{}.svg'.format(run,run),
-            #     bbox_inches = "tight")
-            # plt.close(fig_BAU)
-            # #Scatter plot #FIXME
-            # fig_scatter_outputs = of.scatter_plot(day_profile)
-            # fig_scatter_outputs.savefig(
-            #     'Outputs/Logs/run{}/opt_scatter{}.jpg'.format(run,run),
-            #     bbox_inches = "tight")
-            # plt.close(fig_scatter_outputs)
+        #Scatter plot
+        fig_scatter_outputs = of.scatter_plot(site_profile)
+        fig_scatter_outputs.savefig(
+            'Outputs/Logs/run{}/opt_scatter{}.jpg'.format(run,run),
+            bbox_inches = "tight")
+        plt.close(fig_scatter_outputs)
 
         range_fig = of.daily_summary_plot(days_summary.fillna(0))
         range_fig.savefig(

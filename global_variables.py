@@ -19,8 +19,6 @@ CHAR_ST = dt.time(11, 0,0) # 11 am is start of charging period each day #FIXME M
 CHAR_ST_DELTA = dt.timedelta(hours=11)
 DAY_INTERVALS = 48
 
-
-
 VANS = {
     'PROT': [
         3, 4, 6, 11, 12, 14, 
@@ -63,6 +61,11 @@ CAT_COLS = {
        'opt': 'Output_Opt',
        'BAU': 'Output_BAU',
        'BAU2': 'Output_BAU2' 
+    },
+    'CH_TYPE' : {
+       'opt': 'Ch_Opt',
+       'BAU': 'Ch_BAU',
+       'BAU2': 'Ch_BAU2' 
     },
     'CHARGE_DEL' : {
        'opt': 'ChDelivered_Opt',
