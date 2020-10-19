@@ -8,7 +8,6 @@ import datetime as dt
 import glob
 import pickle
 import global_variables as gv
-import functions as f
 import random
 import time
 
@@ -243,20 +242,37 @@ def create_empty_schedule(journeys, eprice):
     profiles['Session'] = profiles['Session'] * profiles['Available']
     return profiles
 
-all_journeys = prep_data(gv.data_path, gv.CATEGORY)
-print('All journeys done')
-journeys_range = get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
-print('Range journeys done')
-price_data = clean_pricing(gv.pricing_path)
-print('Prices done')
-script_strt = time.process_time()
-empty_profile = create_empty_schedule(journeys_range, price_data)
-print(time.process_time() - script_strt)
-print('Profiles done')
+def create_daily_schedule(profile, day):
+    """Takes a single day from journey data and makes a schedule
 
-# # Pickle
-pickle.dump(all_journeys,open('Outputs/all_journeys','wb'))
-pickle.dump(journeys_range,open('Outputs/journeys_range','wb'))
-pickle.dump(price_data,open('Outputs/price_data','wb'))
-pickle.dump(empty_profile,open('Outputs/empty_profile','wb'))
+    Args:
+        profile (DataFrame): profile for a whole range, all vehicles
+        day (datetime):
+
+    Returns:
+        DataFrame: profile for that day, sorted
+    """
+    start_datetime = day + gv.CHAR_ST_DELTA
+    end_datetime = start_datetime + dt.timedelta(days=1)
+    day_profile = profile[(profile.index.get_level_values(0) < end_datetime)
+    & (profile.index.get_level_values(0) >= start_datetime)]
+    return day_profile.sort_index()
+
+if __name__ == "__main__":
+    all_journeys = prep_data(gv.data_path, gv.CATEGORY)
+    print('All journeys done')
+    journeys_range = get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
+    print('Range journeys done')
+    price_data = clean_pricing(gv.pricing_path)
+    print('Prices done')
+    script_strt = time.process_time()
+    empty_profile = create_empty_schedule(journeys_range, price_data)
+    print(time.process_time() - script_strt)
+    print('Profiles done')
+
+    # # Pickle
+    pickle.dump(all_journeys,open('Outputs/all_journeys','wb'))
+    pickle.dump(journeys_range,open('Outputs/journeys_range','wb'))
+    pickle.dump(price_data,open('Outputs/price_data','wb'))
+    pickle.dump(empty_profile,open('Outputs/empty_profile','wb'))
 

@@ -8,7 +8,7 @@ import matplotlib.dates as mdates
 import matplotlib.font_manager as font_manager
 
 # Creates summary columns and dataframes from outputs, for multiple days
-def summary_outputs(profile, journeys,dates):
+def summary_outputs(profile, journeys,dates,cap):# FIXME does this still need dates?
     cols=gv.CAT_COLS
     vehicles = profile.index.get_level_values(1).unique()
     range_profile = profile.fillna(0)
@@ -33,6 +33,7 @@ def summary_outputs(profile, journeys,dates):
     for ca in gv.CATS:
         site[cols['SOC'][ca]] = range_profile[cols['SOC'][ca]].groupby(level=0).mean()
         site[cols['NUM'][ca]] = range_profile[cols['OUTPUT'][ca]].astype(bool).groupby(level=0).sum()
+        site[cols['BREACH'][ca]] = site[cols['OUTPUT'][ca]] > cap * gv.TIME_FRACT+0.01
 
     # Daily summaries 
     site['date'] = site.index.date - (

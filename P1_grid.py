@@ -9,9 +9,9 @@ import datetime as dt
 from pulp import *
 import pickle
 import global_variables as gv
-import functions as f
 import lin_prog_functions as lpf
 import output_functions as of
+import testdata_proc as pf
 import matplotlib.pyplot as plt
 import glob
 import time
@@ -19,12 +19,22 @@ import random
 import os
 
 # Variables for grid search
-run = 84
-charger_power = [22,11,7]#, 45, 11, 7] # kW
-caps = [25,30,35,40]#,500] #100 300 100 200
+run = 104
+charger_power = [[11,22]]#, 45, 11, 7] # kW
+caps = [20]#,500] #100 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
-journeys = pickle.load(open('Outputs/journeys_range','rb'))
-empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
+
+all_journeys = pf.prep_data(gv.data_path, gv.CATEGORY)
+print('All journeys done')
+journeys = pf.get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
+print('Range journeys done')
+price_data = pf.clean_pricing(gv.pricing_path)
+print('Prices done')
+empty_profile = pf.create_empty_schedule(journeys, price_data)
+print('Profiles done')
+
+# journeys = pickle.load(open('Outputs/journeys_range','rb'))
+# empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
 
 for charger in charger_power:
     for capacity in caps:
@@ -35,12 +45,11 @@ for charger in charger_power:
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = """5 vehicle test with optimise_range2 / linear_optimiser_V3, 
-        lower cap. Full empty profile."""
+        notes = """Added a dt of optimisation 'level' each day"""
         os.makedirs('Outputs/Logs/run{}'.format(run))
         grid_file = open(grid_file_path,'a')
         grid_file.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
-        profile_out, dates, bad_days, lpprob = lpf.optimise_range2(
+        profile_out, dates, bad_days, lpprob, status = lpf.optimise_range2(
             empty_profile, 
             charger, 
             site_capacity)
@@ -48,7 +57,7 @@ for charger in charger_power:
         range_profile, site_profile, days_summary, global_summary = of.summary_outputs(
         profile_out, 
             journeys, 
-            dates)
+            dates,capacity)
 
         ################ OUTPUTS ####################
         # Make and save daily figures
@@ -93,6 +102,7 @@ for charger in charger_power:
         pickle.dump(range_profile,open('Outputs/Logs/run{}/route_profiles{}'.format(run,run),'wb'))
         pickle.dump(site_profile,open('Outputs/Logs/run{}/site_summary{}'.format(run,run),'wb'))
         pickle.dump(days_summary,open('Outputs/Logs/run{}/days_summary'.format(run),'wb'))
+        pickle.dump(status,open('Outputs/Logs/run{}/status'.format(run),'wb'))
         grid_file.write(global_summary.to_string())
         grid_file.write('\n'+bad_days)
         runtime = time.process_time() - script_strt
@@ -101,25 +111,3 @@ for charger in charger_power:
         run += 1
         grid_file.close()
 
-########################
-#To tidy json dataframes
-# day_profile['Index'] = day_profile.index.values
-# day_profile['from'] = day_profile['Index'].str.split('\'').str[1]
-# day_profile['Route_ID'] = day_profile['Index'].str[-8:-1]
-# day_profile['from'] = day_profile['from'].astype('datetime64[ns]')
-# day_profile.drop(columns='Index',inplace=True)
-# day_profile.set_index(['from','Route_ID'],inplace=True)
-
-# site_summary['Index'] = site_summary.index.values
-# site_summary['from'] = site_summary['Index'].astype('datetime64[ns]')
-# site_summary.drop(columns='Index',inplace=True)
-# site_summary.set_index(['from'],inplace=True)
-# site_summary.head()
-
-# # To set fonts
-# font_dirs = ['Data\Source_Sans_Pro', ]
-# font_files = font_manager.findSystemFonts(fontpaths=font_dirs)
-# font_list = font_manager.createFontList(font_files)
-# font_manager.fontManager.ttflist.extend(font_list)
-
-# mpl.rcParams['font.family'] = 'Source Sans Pro'

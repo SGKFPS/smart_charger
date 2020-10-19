@@ -7,8 +7,8 @@ NUM_VEHICLES = 5
 NUM_FAST_CH = 2
 TIME_INT = dt.timedelta(minutes = 30)
 START_DT = dt.datetime(2019,1,31,0,0,0)
-#TIME_RANGE = dt.timedelta(weeks=52,days=4)
-TIME_RANGE = dt.timedelta(weeks=1,days=0)
+TIME_RANGE = dt.timedelta(weeks=52,days=4)
+#TIME_RANGE = dt.timedelta(weeks=1,days=0)
 DAY = dt.datetime(2019,1,31)
 # CHARGER_POWER = 22 # kW
 CHARGER_EFF = 0.9
@@ -91,6 +91,11 @@ CAT_COLS = {
        'opt': 'N_Opt',
        'BAU': 'N_BAU',
        'BAU2': 'N_BAU2'         
+    },
+    'BREACH' : {
+       'opt' : 'Br_Opt',
+       'BAU' : 'Br_BAU',
+       'BAU2' : 'Br_BAU2'
     }
 }
 
