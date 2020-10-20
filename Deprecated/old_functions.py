@@ -382,7 +382,7 @@ def linear_optimiser_V3(profile,ca,charger,capacity,rel_charge,next_req):
 
     # Add costs to objective function
     prob += lpSum(
-        [profile_av.loc[(period, vehicle), price_col] * outputs[period, vehicle] 
+        [profile_av.loc[(period, vehicle), price_col] * outputs[period, vehicle]
         for period, vehicle in profile_av.index]
         ), "Total Charging costs"
 

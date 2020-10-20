@@ -19,12 +19,12 @@ import random
 import os
 
 # Variables for grid search
-run = 104
-charger_power = [[11,22]]#, 45, 11, 7] # kW
-caps = [20]#,500] #100 300 100 200
+run = 113
+charger_power = [11,11], [22,22]]  # [[11,22],[7,22]], 45, 11, 7] # kW
+caps = [40,60,120]#,500] #100 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
 
-all_journeys = pf.prep_data(gv.data_path, gv.CATEGORY)
+journeys = pf.prep_data(gv.data_path, gv.CATEGORY)
 print('All journeys done')
 journeys = pf.get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
 print('Range journeys done')
@@ -45,19 +45,19 @@ for charger in charger_power:
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = """Added a dt of optimisation 'level' each day"""
+        notes = """Grid search with mix of chargers"""
         os.makedirs('Outputs/Logs/run{}'.format(run))
         grid_file = open(grid_file_path,'a')
         grid_file.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
         profile_out, dates, bad_days, lpprob, status = lpf.optimise_range2(
-            empty_profile, 
-            charger, 
+            empty_profile,
+            charger,
             site_capacity)
 
         range_profile, site_profile, days_summary, global_summary = of.summary_outputs(
-        profile_out, 
-            journeys, 
-            dates,capacity)
+        profile_out,
+            journeys,
+            capacity)
 
         ################ OUTPUTS ####################
         # Make and save daily figures
@@ -82,7 +82,7 @@ for charger in charger_power:
             bbox_inches = "tight")
         plt.close(range_fig)
 
- 
+
         # Create a list of settings
         with open('global_variables.py','r') as f:
             global_variables = f.read()
@@ -99,7 +99,7 @@ for charger in charger_power:
         lpprob['opt'].writeLP("Outputs/Logs/run{}/multi_vehicle.lp".format(run))
 
         # Save dataframes
-        pickle.dump(range_profile,open('Outputs/Logs/run{}/route_profiles{}'.format(run,run),'wb'))
+        pickle.dump(range_profile,open('Outputs/Logs/run{}/range_profiles{}'.format(run,run),'wb'))
         pickle.dump(site_profile,open('Outputs/Logs/run{}/site_summary{}'.format(run,run),'wb'))
         pickle.dump(days_summary,open('Outputs/Logs/run{}/days_summary'.format(run),'wb'))
         pickle.dump(status,open('Outputs/Logs/run{}/status'.format(run),'wb'))
