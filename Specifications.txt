@@ -1,4 +1,4 @@
-Inputs for allocation script:
+Inputs for allocation script, these will be coded in the global_variables.py file
 Store: 513
 Year: 2019
 Vehicle: Vivaro-e LR
