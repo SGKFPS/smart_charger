@@ -14,11 +14,12 @@ DAY = dt.datetime(2019, 6, 30)
 CHARGER_EFF = 0.9
 BATTERY_CAPACITY = 75  # kWh
 MARGIN_SOC = 0.1  # Required SOC will be 10% more than planned
-CATS = ['opt', 'BAU', 'BAU2']
+CATS = ['opt'] #, 'BAU', 'BAU2']
 CHAR_ST = dt.time(11, 0, 0)  # FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=11)
 DAY_INTERVALS = 48
 
+# Select set of vans to use for prototyping or testing.
 VANS = {
     'PROT': [
         3, 4, 6, 11, 12, 14,
@@ -36,12 +37,6 @@ CATEGORY = 'PROT'
 NUM_CHARGERS = NUM_VEHICLES
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
 # POWER_INT = CHARGER_POWER * TIME_FRACT
-
-# SITE_CAPACITY = {
-#     'opt': 50,  # kWh (in a half-hour period so eq. 100 kW)
-#     'BAU': 10000,
-#     'BAU2': 50
-#  }
 
 IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
                'End_Time_of_Route', 'Energy_Required', 'vannumber_ev_']

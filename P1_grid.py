@@ -20,7 +20,8 @@ import os
 
 # Variables for grid search
 run = 127
-charger_power = [[7,22]]  # [11,11], [22,22], [11,22], [11,22]]  # 45 # kW
+# Chargers to use in the grid, in kW
+charger_power = [[7,22]]  # [[11,11], [22,22], [11,22], [11,22], [7,45]]
 caps = [60]  # 40, 120, 100, 150 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
 
