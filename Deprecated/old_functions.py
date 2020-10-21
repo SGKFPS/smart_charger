@@ -1,5 +1,5 @@
 def dumb_charging_no(journeys, eprice): # TODO am I using this?
-    # Create df for charge profile, with time slots in that time range. 
+    # Create df for charge profile, with time slots in that time range.
     empty_profile, time_range = create_empty_schedule(journeys, eprice)
     # Iterate over each day
     dates = journeys.index.unique(level='date')

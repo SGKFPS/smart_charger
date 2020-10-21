@@ -319,3 +319,37 @@ def create_daily_summary(summary, day):
                           & (summary.index >= start_datetime)]
     day_profile.sort_index(inplace=True)
     return day_profile
+
+def fig_scenario_count(df, x):
+    """Creates a figure for feasible/unfeasible distribution
+
+    Args:
+        df (DataFrame): table of feasible and unfeasible journeys with
+                        MultiIndex ['cap','Slow_ch','Fast_c']. Same
+                        order as x
+        x (list): List of charger combinations, in same order as df
+
+    Returns:
+        fig: stacked bar chart
+    """
+    categories = df.columns
+    caps = df.index.get_level_values('cap').unique()
+    fig, axs = plt.subplots(
+        5,
+        figsize=(6,6),
+        sharex=True,
+        gridspec_kw={'hspace':0.1})
+    for i in range(5):
+        axs[i].bar(
+            x, df.loc[caps[i]]['Feasible'],
+            label="Feasible")
+        axs[i].bar(
+            x, df.loc[caps[i]]['Unfeasible'],
+            bottom=(df.loc[caps[i]]['Feasible']),
+            label='Unfeasible')
+
+        axs[i].set_ylabel('{} kW \n# days'.format(caps[i]), color=gv.FPS_BLUE)
+    axs[-1].legend()
+    axs[-1].set_xlabel('Combination of chargers', color=gv.FPS_BLUE)
+    axs[0].set_title('Distribution of scenarios for each combination of chargers', color=gv.FPS_BLUE, fontweight='bold')
+    return fig

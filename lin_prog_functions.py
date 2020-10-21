@@ -647,10 +647,12 @@ def linear_optimiser_V4(profile, ca, charger1, charger2,
     print(ca, "status:", LpStatus[prob.status])
     # If unfeasible, tries to charge to next day
     if prob.status == -1:
-        df, note2, opt_level = charge_tonextday(
-            profile, ca, charger1, charger2, capacity, rel_charge, next_req)
+        df = magic_charging(profile, ca, rel_charge)
+        # df, note2, opt_level = charge_tonextday( # IFXME change this back
+        #     profile, ca, charger1, charger2, capacity, rel_charge, next_req)
         note += '\nMain unfeasible'
-        note += note2
+        # note += note2 # FIXME uncomment this
+        opt_level = 'Magic'
     else:
         # Get output variables
         charge_output = []

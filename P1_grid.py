@@ -19,14 +19,14 @@ import random
 import os
 
 # Variables for grid search
-run = 113
-charger_power = [11,11], [22,22]]  # [[11,22],[7,22]], 45, 11, 7] # kW
-caps = [40,60,120]#,500] #100 300 100 200
+run = 127
+charger_power = [[7,22]]  # [11,11], [22,22], [11,22], [11,22]]  # 45 # kW
+caps = [60]  # 40, 120, 100, 150 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
 
 journeys = pf.prep_data(gv.data_path, gv.CATEGORY)
 print('All journeys done')
-journeys = pf.get_range_data(all_journeys, gv.DAY, gv.TIME_RANGE)
+journeys = pf.get_range_data(journeys, gv.DAY, gv.TIME_RANGE)
 print('Range journeys done')
 price_data = pf.clean_pricing(gv.pricing_path)
 print('Prices done')
@@ -45,7 +45,7 @@ for charger in charger_power:
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = """Grid search with mix of chargers"""
+        notes = """Test with only main and magic charging"""
         os.makedirs('Outputs/Logs/run{}'.format(run))
         grid_file = open(grid_file_path,'a')
         grid_file.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
