@@ -32,7 +32,7 @@ def optimise_range2(empty_profile, charger, capacity):
     dates = np.unique(empty_profile.index.get_level_values(0).date)
     all_days_profile = []
     dates_status = pd.DataFrame(columns=gv.CATS)
-    bad_days = 'Bad days:\n'
+    bad_days = '\nBad days:\n'
     status = 0
     initial_rel_charge = pd.Series(
         data=[0]*gv.NUM_VEHICLES,
@@ -85,9 +85,9 @@ def optimise_range2(empty_profile, charger, capacity):
                 date,
                 # '\nTime:', time.process_time() - start,
                 'Status:', day_status,
-                ':', PuLP_prob['opt'].status,
-                PuLP_prob['BAU'].status,
-                PuLP_prob['BAU2'].status)
+                ':', PuLP_prob['opt'].status)
+                # PuLP_prob['BAU'].status,
+                # PuLP_prob['BAU2'].status)
             all_days_profile.append(day_profile_out)
             if day_status < 3:
                 bad_days += '\nNon-Optimal: '
@@ -97,6 +97,7 @@ def optimise_range2(empty_profile, charger, capacity):
                     bad_days += '_'
                     bad_days += str(PuLP_prob[ca].status)
     profile_out = pd.concat(all_days_profile)
+    dates_status.rename(columns=gv.CAT_COLS['LEVEL'], inplace=True)
     return profile_out, dates, bad_days, PuLP_prob, dates_status
 
 
@@ -647,12 +648,11 @@ def linear_optimiser_V4(profile, ca, charger1, charger2,
     print(ca, "status:", LpStatus[prob.status])
     # If unfeasible, tries to charge to next day
     if prob.status == -1:
-        df = magic_charging(profile, ca, rel_charge)
-        # df, note2, opt_level = charge_tonextday( # IFXME change this back
-        #     profile, ca, charger1, charger2, capacity, rel_charge, next_req)
+        # df = magic_charging(profile, ca, rel_charge)
+        df, note2, opt_level = charge_tonextday(
+            profile, ca, charger1, charger2, capacity, rel_charge, next_req)
         note += '\nMain unfeasible'
-        # note += note2 # FIXME uncomment this
-        opt_level = 'Magic'
+        note += note2
     else:
         # Get output variables
         charge_output = []
@@ -676,7 +676,7 @@ def linear_optimiser_V4(profile, ca, charger1, charger2,
         df.set_index(['from', 'Vehicle_ID'], inplace=True)
         print('Cost:', value(prob.objective))
     # Generate a final SoC array
-    final_soc = rel_charge + (
+    final_soc = (rel_charge + (
         df.groupby('Vehicle_ID').sum()[output_col]*gv.CHARGER_EFF
-        + profile.groupby('Vehicle_ID').sum()['Battery_Use'])
+        + profile.groupby('Vehicle_ID').sum()['Battery_Use'])).round(6)
     return df, prob, final_soc, note, opt_level

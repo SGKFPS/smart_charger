@@ -6,15 +6,18 @@ import datetime as dt
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 import matplotlib.font_manager as font_manager
+import plotly.graph_objects as go
+import plotly.io as pio
 
 
-def summary_outputs(profile, journeys, cap):
+def summary_outputs(profile, journeys, cap, status):
     """Creates summary columns and dataframes from outputs
 
     Args:
         profile (DataFrame): output/SOC per time period, per vehicle
         journeys (DataFrame): all the journey information for all routes
         cap (float): max. site capacity
+        status (DataFrame): level of optimisation for each day
 
     Returns:
         DataFrames: dfs corresponding to overall profile, site
@@ -57,28 +60,38 @@ def summary_outputs(profile, journeys, cap):
         site.index.time < gv.CHAR_ST).astype(int) * dt.timedelta(days=1)
     day_summary = site.groupby('date').sum()
     day_summary.drop(columns=[cols['PRICE']['opt'], 'Available'], inplace=True)
+    day_summary = day_summary.merge(status, left_index=True, right_index=True)
     for ca in gv.CATS:
         day_summary.drop(columns=[cols['NUM'][ca], cols['SOC'][ca]],
                          inplace=True)
-    day_summary['%BAU'] = 100 * (
-        day_summary['ECost_BAU'] - day_summary['ECost_Opt']
-        )/day_summary['ECost_BAU']
-    day_summary['%BAU2'] = 100 * (
-        day_summary['ECost_BAU2'] - day_summary['ECost_Opt']
-        )/day_summary['ECost_BAU2']
+    # day_summary['%BAU'] = 100 * (
+    #     day_summary['ECost_BAU'] - day_summary['ECost_Opt']
+    #     )/day_summary['ECost_BAU']
+    # day_summary['%BAU2'] = 100 * (
+    #     day_summary['ECost_BAU2'] - day_summary['ECost_Opt']
+    #     )/day_summary['ECost_BAU2']
 
     # Clean to only optimal days
-    clean_summary = day_summary.copy()
+    # clean_summary = day_summary.copy()
+    # for ca in gv.CATS:
+    #     clean_summary = clean_summary[
+    #         clean_summary[gv.CAT_COLS['OUTPUT'][ca]] != 0]
+    global_summary = day_summary.sum()
     for ca in gv.CATS:
-        clean_summary = clean_summary[
-            clean_summary[gv.CAT_COLS['OUTPUT'][ca]] != 0]
-    global_summary = clean_summary.sum()
-    global_summary['%BAU'] = 100 * (
-        global_summary['ECost_BAU'] - global_summary['ECost_Opt']
-        )/global_summary['ECost_BAU']
-    global_summary['%BAU2'] = 100 * (
-        global_summary['ECost_BAU2'] - global_summary['ECost_Opt']
-        )/global_summary['ECost_BAU2']
+        global_summary.drop(labels=gv.CAT_COLS['LEVEL'][ca],
+                            inplace=True)
+    global_summary = global_summary.append(
+        day_summary.groupby(
+            gv.CAT_COLS['LEVEL'][gv.CATS[0]]).count()['Battery_Use'])
+    # c = gv.CATS[0]
+    # global_summary[gv.CAT_COLS['LEVEL'][c]] = day_summary.groupby(
+    #     c).agg({'BAU':'count'}).T
+    # global_summary['%BAU'] = 100 * (
+    #     global_summary['ECost_BAU'] - global_summary['ECost_Opt']
+    #     )/global_summary['ECost_BAU']
+    # global_summary['%BAU2'] = 100 * (
+    #     global_summary['ECost_BAU2'] - global_summary['ECost_Opt']
+    #     )/global_summary['ECost_BAU2']
     return range_profile, site, day_summary, global_summary
 
 
@@ -152,7 +165,7 @@ def daily_summary_plot(summary):
         fig
     """
     fig, axs = plt.subplots(
-        3,
+        2,
         figsize=(12, 10),
         sharex=True,
         gridspec_kw={'hspace': 0.1})
@@ -173,26 +186,14 @@ def daily_summary_plot(summary):
             label=ca,
             color=gv.COLOR[ca]
         )
-    axs[2].scatter(
-        x,
-        summary['%BAU'],
-        label='BAU',
-        color=gv.COLOR['BAU']
-    )
-    axs[2].scatter(
-        x,
-        summary['%BAU2'],
-        label='BAU2',
-        color=gv.COLOR['BAU2']
-    )
 
     # labels and legends
     axs[0].set_ylabel('E. Demand (kW)', color=gv.FPS_BLUE, fontweight='bold')
     axs[1].set_ylabel('E. Costs (GBP)', color=gv.FPS_BLUE, fontweight='bold')
-    axs[2].set_ylabel('Savings (%)', color=gv.FPS_BLUE, fontweight='bold')
-    axs[2].set_xlabel('Time', color=gv.FPS_BLUE, fontweight='bold')
+    #axs[2].set_ylabel('Savings (%)', color=gv.FPS_BLUE, fontweight='bold')
+    axs[1].set_xlabel('Time', color=gv.FPS_BLUE, fontweight='bold')
     axs[1].legend(frameon=False)
-    axs[2].legend(frameon=False)
+    # axs[2].legend(frameon=False)
 
     for ax in fig.get_axes():
         ax.xaxis.set_major_locator(plt.MaxNLocator(12))
@@ -242,30 +243,17 @@ def scatter_plot(site_summary):
 
     x = site_summary.groupby('Electricity_Price').mean().index
     y1 = site_summary.groupby('Electricity_Price').sum()
-    cols = ['Output_BAU', 'Output_BAU2', 'Output_Opt']
+    cols = [gv.CAT_COLS['OUTPUT'][ca] for ca in gv.CATS]
     y1[cols] = y1[cols].replace({0: np.nan})
 
-    axs.scatter(
-        x,
-        y1['Output_Opt'],
-        color=gv.COLOR['opt'],
-        alpha=1,
-        label='Smart Charging'
-        )
-    axs.scatter(
-        x,
-        y1['Output_BAU'],
-        color=gv.COLOR['BAU'],
-        alpha=0.6,
-        label='Unconstrained BAU'
-        )
-    axs.scatter(
-        x,
-        y1['Output_BAU2'],
-        color=gv.COLOR['BAU2'],
-        alpha=0.6,
-        label='Constrained BAU'
-        )
+    for ca in gv.CATS:
+        axs.scatter(
+            x,
+            y1[gv.CAT_COLS['OUTPUT'][ca]],
+            color=gv.COLOR[ca],
+            alpha=gv.ALPHA[ca],
+            label=gv.LABELS[ca]
+            )
 
     axs.set_ylabel('Output (kWh)')
     axs.set_xlabel('Electricity Price (p / kWh)')
@@ -351,5 +339,45 @@ def fig_scenario_count(df, x):
         axs[i].set_ylabel('{} kW \n# days'.format(caps[i]), color=gv.FPS_BLUE)
     axs[-1].legend()
     axs[-1].set_xlabel('Combination of chargers', color=gv.FPS_BLUE)
-    axs[0].set_title('Distribution of scenarios for each combination of chargers', color=gv.FPS_BLUE, fontweight='bold')
+    axs[0].set_title(
+        'Distribution of scenarios for each combination of chargers',
+        color=gv.FPS_BLUE, fontweight='bold')
     return fig
+
+def createHeatmap(profile):
+    """Generate heatmaps for charging schedules
+
+    Args:
+        profile (DataFrame): Profile aggregated at site level
+
+    Returns:
+        fig: heatmap
+    """
+    profile['day'] = profile.index.date
+    profile['time'] = profile.index.time
+    dates = profile['date'].unique()
+    timeperiods = np.sort(profile['time'].unique())
+
+    loads = np.zeros((len(timeperiods), len(dates)))
+
+    for i, date in enumerate(dates):
+        for j, tp in enumerate(timeperiods):
+            fulldt = dt.datetime.combine(date, tp)
+            if fulldt in profile.index:
+                loads[j, i] = profile.loc[fulldt,'Output_Opt']
+
+    # use loads, dates, and timeperiods as your data
+    fig = go.Figure(data=go.Heatmap(
+        z=loads,
+        y=timeperiods,
+        x=dates,
+        hoverongaps=False,
+        colorbar=dict(title='EV charging (kW)')
+        ))
+
+    fig.update_layout(
+        title="EV Charging schedule from"+str(dates[0])+" to "+str(dates[-1])
+    )
+    fig.show()
+    return fig
+

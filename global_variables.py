@@ -6,10 +6,10 @@ import datetime as dt
 NUM_VEHICLES = 10
 NUM_FAST_CH = 5
 TIME_INT = dt.timedelta(minutes=30)
-START_DT = dt.datetime(2019, 6, 30, 0, 0, 0)
-TIME_RANGE = dt.timedelta(weeks=30, days=4)
-#TIME_RANGE = dt.timedelta(weeks=1,days=0)
-DAY = dt.datetime(2019, 6, 30)
+START_DT = dt.datetime(2019, 3, 1, 0, 0, 0)
+#TIME_RANGE = dt.timedelta(weeks=52, days=4)
+TIME_RANGE = dt.timedelta(weeks=0,days=4)
+DAY = START_DT
 
 CHARGER_EFF = 0.9
 BATTERY_CAPACITY = 75  # kWh
@@ -40,6 +40,8 @@ TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
 
 IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
                'End_Time_of_Route', 'Energy_Required', 'vannumber_ev_']
+
+LEVELS = ['Main', 'Tonext', 'Breach', 'Magic', 'Empty']
 
 FPS_BLUE = '#004A9C'
 FPS_GREEN = '#45D281'
@@ -91,6 +93,11 @@ CAT_COLS = {
        'opt': 'Br_Opt',
        'BAU': 'Br_BAU',
        'BAU2': 'Br_BAU2'
+    },
+    'LEVEL': {
+       'opt': 'Level_Opt',
+       'BAU': 'Level_BAU',
+       'BAU2': 'Level_BAU2'
     }
 }
 
@@ -98,6 +105,12 @@ COLOR = {
     'opt': FPS_YELLOW,
     'BAU': FPS_BLUE,
     'BAU2': FPS_GREEN
+ }
+
+ALPHA = {
+    'opt': 1,
+    'BAU': 0.6,
+    'BAU2': 0.6
  }
 
 LABELS = {

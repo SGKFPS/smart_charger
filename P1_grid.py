@@ -19,9 +19,9 @@ import random
 import os
 
 # Variables for grid search
-run = 127
+run = 128
 # Chargers to use in the grid, in kW
-charger_power = [[7,22]]  # [[11,11], [22,22], [11,22], [11,22], [7,45]]
+charger_power = [[11, 22], [7, 45]]  # [[11,11], [22,22], [7,22], [11,22]
 caps = [60]  # 40, 120, 100, 150 300 100 200
 grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
 
@@ -36,6 +36,17 @@ print('Profiles done')
 
 # journeys = pickle.load(open('Outputs/journeys_range','rb'))
 # empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
+grid_file = open(grid_file_path,'a')
+grid_file.write(
+    'run,Charger 1,Charger 2,Capacity (kW),Runtime,Battery Use,'
+)
+for ca in gv.CATS:
+    grid_file.write(str(gv.CAT_COLS['OUTPUT'][ca] + ','))
+    grid_file.write(str(gv.CAT_COLS['CHARGE_DEL'][ca] + ','))
+    grid_file.write(str(gv.CAT_COLS['ECOST'][ca] + ','))
+    grid_file.write(str(gv.CAT_COLS['BREACH'][ca] + ','))
+grid_file.write('Main,Tonext,Breach,Magic,Empty')
+grid_file.close()
 
 for charger in charger_power:
     for capacity in caps:
@@ -46,10 +57,8 @@ for charger in charger_power:
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = """Test with only main and magic charging"""
+        notes = """Test 10 vehicles. Opt only."""
         os.makedirs('Outputs/Logs/run{}'.format(run))
-        grid_file = open(grid_file_path,'a')
-        grid_file.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
         profile_out, dates, bad_days, lpprob, status = lpf.optimise_range2(
             empty_profile,
             charger,
@@ -58,7 +67,7 @@ for charger in charger_power:
         range_profile, site_profile, days_summary, global_summary = of.summary_outputs(
         profile_out,
             journeys,
-            capacity)
+            capacity, status)
 
         ################ OUTPUTS ####################
         # Make and save daily figures
@@ -83,6 +92,11 @@ for charger in charger_power:
             bbox_inches = "tight")
         plt.close(range_fig)
 
+        heatplot = of.createHeatmap(site_profile)
+        heatplot.write_image(
+            'Outputs/Logs/run{}/heatplot{}.png'.format(run,run),
+            width=1800, height=1000)
+        heatplot.write_html("Outputs/Logs/run{}/heatplot{}.html".format(run,run))
 
         # Create a list of settings
         with open('global_variables.py','r') as f:
@@ -90,7 +104,7 @@ for charger in charger_power:
 
         with open('Outputs/Logs/run{}/variables{}.csv'.format(run,run),'a') as fi:
             fi.write(notes)
-            fi.write('\n' + str(run)+'\n'+str(charger) + '\n' + str(capacity) +'\n')
+            fi.write('\n' + str(run)+','+str(charger) + ',' + str(capacity) +'\n')
             fi.write(global_summary.to_string())
             fi.write(bad_days)
             fi.write('\n \n global_variables.py:\n')
@@ -104,11 +118,26 @@ for charger in charger_power:
         pickle.dump(site_profile,open('Outputs/Logs/run{}/site_summary{}'.format(run,run),'wb'))
         pickle.dump(days_summary,open('Outputs/Logs/run{}/days_summary'.format(run),'wb'))
         pickle.dump(status,open('Outputs/Logs/run{}/status'.format(run),'wb'))
-        grid_file.write(global_summary.to_string())
-        grid_file.write('\n'+bad_days)
         runtime = time.process_time() - script_strt
-        grid_file.write('\n'+str(runtime))
         print('Range:', gv.TIME_RANGE, 'Time:',time.process_time(),'Runtime:',runtime)
-        run += 1
+
+        grid_file = open(grid_file_path,'a')
+        grid_file.write('\n' + str(run) +','
+                        + str(charger[0]) + ',' + str(charger[1]) + ',' + str(capacity) +',')
+        grid_file.write(str(runtime) + ',')
+        grid_file.write(str(global_summary['Battery_Use']) + ',')
+
+        for ca in gv.CATS:
+            grid_file.write(str(global_summary[gv.CAT_COLS['OUTPUT'][ca]]) + ',')
+            grid_file.write(str(global_summary[gv.CAT_COLS['CHARGE_DEL'][ca]]) + ',')
+            grid_file.write(str(global_summary[gv.CAT_COLS['ECOST'][ca]]) + ',')
+            grid_file.write(str(global_summary[gv.CAT_COLS['BREACH'][ca]]) + ',')
+        for l in gv.LEVELS:
+            if l in global_summary.index:
+                grid_file.write(str(global_summary[l]) + ',')
+            else:
+                grid_file.write('0,')
         grid_file.close()
+        run += 1
+
 
