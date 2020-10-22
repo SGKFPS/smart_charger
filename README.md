@@ -81,21 +81,21 @@ Electricity pricing for each half hour period (in pence).
 
 1) Modify global_variavels.py:
 
-    a) Modify lines 108 and 109 with your file paths for journeys and
+    1) Modify lines 108 and 109 with your file paths for journeys and
    pricing.
 
-    b) Modify lines 6 and 7 with number of vehicles and number of fast
+    1) Modify lines 6 and 7 with number of vehicles and number of fast
        chargers
 
-    c) Modify lines 9 and 12 for your range start time (sorry, you have
+    1) Modify lines 9 and 12 for your range start time (sorry, you have
        to do both!)
 
-    d) Modify line 10 for your time range to study
+    1) Modify line 10 for your time range to study
 
-    e) If you want to calculate a benchmark, uncomment them from the
+    1) If you want to calculate a benchmark, uncomment them from the
        list in line 17 (but think about using a single charger power)
 
-    f) Change battery capacity to your vehicle spec
+    1) Change battery capacity to your vehicle spec
 
 2) Modify P1_grid.py
 
@@ -103,7 +103,7 @@ Electricity pricing for each half hour period (in pence).
    yet). This is for logging purposes.
 
     1) Line 24: Select your chargers to use. This is in the shape of a
-   list of lists, so [[11,11], [22,22], [11,22]] will perform a search 
+   list of lists, so `[[11,11], [22,22], [11,22]]` will perform a search 
    with all 11 kW chargers, all 22 kW chargers and a mix of 11 and 22 kW.
 
     1) Line 25: List of site capacities to include in your grid search
