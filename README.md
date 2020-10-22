@@ -1,17 +1,23 @@
+# Smart Charging Tool
 This tool was developed to optimise the charging of a fleet of electric
 vehicles according to various costs.
 
 The current Phase 1 focuses on charging at low priced period while
 maintining overall site below a global site capacity. There's also
 functionality to charge to next day's requirements or to breach site
-capacity if absolutely necessary. The optimisation is done using PuLP,
+capacity if absolutely necessary. The optimisation is done using **PuLP**,
 a linear programming package.
 
-# See also
+## Table of Contents
 
-Slide decks in [Sharepoint](https://flexpowerltd.sharepoint.com/:f:/s/WEVCMFC/ErXbpxa-1YtKo6P5XfcKhhIB92Bj8NSUSW9O0Oc_36hyGQ?e=X2TiLs)
+* [Required Packages](https://github.com/st-FPS/Smart_charging_prototypes#required-packages)
+* [Structure](https://github.com/st-FPS/Smart_charging_prototypes#structure)
+* [Inputs](https://github.com/st-FPS/Smart_charging_prototypes#inputs)
+* Outputs (tbc)
+* [Getting Started](https://github.com/st-FPS/Smart_charging_prototypes#getting-started)
+* [Notes](https://github.com/st-FPS/Smart_charging_prototypes#notes)
 
-# Required Packages
+## Required Packages
 - pandas, numpy, os
 - datetime
 - time
@@ -20,7 +26,7 @@ Slide decks in [Sharepoint](https://flexpowerltd.sharepoint.com/:f:/s/WEVCMFC/Er
 - pickle
 - pulp
 
-# Structure
+## Structure
 
 - P1_grid.py:
 
@@ -55,8 +61,8 @@ These are all the summary functions, aggregations and plots.
 
 - Jupyter files are for prototyping and specific tests, fine to ignore.
 
-# Inputs
-Example files can be found in [Azure](Z:\R&D Project Data\WEVC - Data Analytics Stream\WP8 - Smart Charging)
+## Inputs
+Example files can be found in Azure (Z:\R&D Project Data\WEVC - Data Analytics Stream\WP8 - Smart Charging)
 
 - Journey data
 
@@ -71,53 +77,51 @@ The current file we're using for 2019 Coulsdon Waitrose CFC data.
 
 Electricity pricing for each half hour period (in pence).
 
-# Getting Started
+## Getting Started
 
 1) Modify global_variavels.py:
 
-    a) Modify lines 108 and 109 with your file paths for journeys and
+    1) Modify lines 108 and 109 with your file paths for journeys and
    pricing.
 
-    b) Modify lines 6 and 7 with number of vehicles and number of fast
+    1) Modify lines 6 and 7 with number of vehicles and number of fast
        chargers
 
-    c) Modify lines 9 and 12 for your range start time (sorry, you have
+    1) Modify lines 9 and 12 for your range start time (sorry, you have
        to do both!)
 
-    d) Modify line 10 for your time range to study
+    1) Modify line 10 for your time range to study
 
-    e) If you want to calculate a benchmark, uncomment them from the
+    1) If you want to calculate a benchmark, uncomment them from the
        list in line 17 (but think about using a single charger power)
 
-    f) Change battery capacity to your vehicle spec
+    1) Change battery capacity to your vehicle spec
 
 2) Modify P1_grid.py
 
-    a) Line 22: Manually adjust the run # (to one that doesn't exist
-       yet). This is for logging purposes.
+    1) Line 22: Manually adjust the run # (to one that doesn't exist
+   yet). This is for logging purposes.
 
-    b) Line 24: Select your chargers to use. This is in the shape of a
-       list of lists, so
+    1) Line 24: Select your chargers to use. This is in the shape of a
+   list of lists, so `[[11,11], [22,22], [11,22]]` will perform a search 
+   with all 11 kW chargers, all 22 kW chargers and a mix of 11 and 22 kW.
 
-       ```bash
-       [[11,11], [22,22], [11,22]]
-       ```
+    1) Line 25: List of site capacities to include in your grid search
 
-       will perform a search with all 11 kW chargers, all 22 kW
-       chargers and a mix of 11 and 22 kW.
+    1) Lines 28-35: If you don't have the profiles already, leave them
+   uncommented. If you have already generated it from the
+   testdata_proc.py file, comment them and use lines 37-38.
 
-    c) Line 25: List of site capacities to include in your grid search
+    1) Run P1_grid.py and good luck!
+    
+ 1) Create the `Outputs\Logs\` folders
 
-    d) Lines 28-35: If you don't have the profiles already, leave them
-       uncommented. If you have already generated it from the
-       testdata_proc.py file, comment them and use lines 37-38.
-
-    e) Run P1_grid.py and good luck!
-
-# Notes
+## Notes
 - The benchmarks are built in as their own optimiser functions. BAU
 calculates a 'dumb' algorithm which charges each vehicle on arrival
 without capacity constraint. BAU2 is similar but obeys site capacity
 limit. Both of them are less relevant in recent iterations so you
 likely just want to run the 'opt' case and get a general benchmark for
 comparison.
+
+- Slide decks in [Sharepoint](https://flexpowerltd.sharepoint.com/:f:/s/WEVCMFC/ErXbpxa-1YtKo6P5XfcKhhIB92Bj8NSUSW9O0Oc_36hyGQ?e=X2TiLs)
