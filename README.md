@@ -1,17 +1,23 @@
+# Smart Charging Tool
 This tool was developed to optimise the charging of a fleet of electric
 vehicles according to various costs.
 
 The current Phase 1 focuses on charging at low priced period while
 maintining overall site below a global site capacity. There's also
 functionality to charge to next day's requirements or to breach site
-capacity if absolutely necessary. The optimisation is done using PuLP,
+capacity if absolutely necessary. The optimisation is done using **PuLP**,
 a linear programming package.
 
-# See also
+## Table of Contents
 
-Slide decks in [Sharepoint](https://flexpowerltd.sharepoint.com/:f:/s/WEVCMFC/ErXbpxa-1YtKo6P5XfcKhhIB92Bj8NSUSW9O0Oc_36hyGQ?e=X2TiLs)
+* [Required Packages](https://github.com/st-FPS/Smart_charging_prototypes#required-packages)
+* Structure
+* Inputs
+* Outputs (tbc)
+* Getting Started
+* Notes
 
-# Required Packages
+## Required Packages
 - pandas, numpy, os
 - datetime
 - time
@@ -20,7 +26,7 @@ Slide decks in [Sharepoint](https://flexpowerltd.sharepoint.com/:f:/s/WEVCMFC/Er
 - pickle
 - pulp
 
-# Structure
+## Structure
 
 - P1_grid.py:
 
@@ -55,8 +61,8 @@ These are all the summary functions, aggregations and plots.
 
 - Jupyter files are for prototyping and specific tests, fine to ignore.
 
-# Inputs
-Example files can be found in [Azure](Z:\R&D Project Data\WEVC - Data Analytics Stream\WP8 - Smart Charging)
+## Inputs
+Example files can be found in Azure (Z:\R&D Project Data\WEVC - Data Analytics Stream\WP8 - Smart Charging)
 
 - Journey data
 
@@ -99,9 +105,9 @@ Electricity pricing for each half hour period (in pence).
     b) Line 24: Select your chargers to use. This is in the shape of a
        list of lists, so
 
-       ```bash
-       [[11,11], [22,22], [11,22]]
-       ```
+```python
+[[11,11], [22,22], [11,22]]
+```
 
        will perform a search with all 11 kW chargers, all 22 kW
        chargers and a mix of 11 and 22 kW.
@@ -114,10 +120,12 @@ Electricity pricing for each half hour period (in pence).
 
     e) Run P1_grid.py and good luck!
 
-# Notes
+## Notes
 - The benchmarks are built in as their own optimiser functions. BAU
 calculates a 'dumb' algorithm which charges each vehicle on arrival
 without capacity constraint. BAU2 is similar but obeys site capacity
 limit. Both of them are less relevant in recent iterations so you
 likely just want to run the 'opt' case and get a general benchmark for
 comparison.
+
+- Slide decks in [Sharepoint](https://flexpowerltd.sharepoint.com/:f:/s/WEVCMFC/ErXbpxa-1YtKo6P5XfcKhhIB92Bj8NSUSW9O0Oc_36hyGQ?e=X2TiLs)
