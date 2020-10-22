@@ -113,6 +113,8 @@ Electricity pricing for each half hour period (in pence).
    testdata_proc.py file, comment them and use lines 37-38.
 
     1) Run P1_grid.py and good luck!
+    
+ 1) Create the `Outputs\Logs\` folders
 
 ## Notes
 - The benchmarks are built in as their own optimiser functions. BAU
