@@ -11,11 +11,11 @@ a linear programming package.
 ## Table of Contents
 
 * [Required Packages](https://github.com/st-FPS/Smart_charging_prototypes#required-packages)
-* Structure
-* Inputs
+* [Structure](https://github.com/st-FPS/Smart_charging_prototypes#structure)
+* [Inputs](https://github.com/st-FPS/Smart_charging_prototypes#inputs)
 * Outputs (tbc)
-* Getting Started
-* Notes
+* [Getting Started](https://github.com/st-FPS/Smart_charging_prototypes#getting-started)
+* [Notes](https://github.com/st-FPS/Smart_charging_prototypes#notes)
 
 ## Required Packages
 - pandas, numpy, os
@@ -77,7 +77,7 @@ The current file we're using for 2019 Coulsdon Waitrose CFC data.
 
 Electricity pricing for each half hour period (in pence).
 
-# Getting Started
+## Getting Started
 
 1) Modify global_variavels.py:
 
@@ -99,26 +99,23 @@ Electricity pricing for each half hour period (in pence).
 
 2) Modify P1_grid.py
 
-    a) Line 22: Manually adjust the run # (to one that doesn't exist
-       yet). This is for logging purposes.
+ 1) Line 22: Manually adjust the run # (to one that doesn't exist
+   yet). This is for logging purposes.
 
-    b) Line 24: Select your chargers to use. This is in the shape of a
-       list of lists, so
+ 1) Line 24: Select your chargers to use. This is in the shape of a
+   list of lists, so 
+       
+       [[11,11], [22,22], [11,22]]
+       
+will perform a search with all 11 kW chargers, all 22 kW chargers and a mix of 11 and 22 kW.
 
-```python
-[[11,11], [22,22], [11,22]]
-```
+c) Line 25: List of site capacities to include in your grid search
 
-       will perform a search with all 11 kW chargers, all 22 kW
-       chargers and a mix of 11 and 22 kW.
+d) Lines 28-35: If you don't have the profiles already, leave them
+   uncommented. If you have already generated it from the
+   testdata_proc.py file, comment them and use lines 37-38.
 
-    c) Line 25: List of site capacities to include in your grid search
-
-    d) Lines 28-35: If you don't have the profiles already, leave them
-       uncommented. If you have already generated it from the
-       testdata_proc.py file, comment them and use lines 37-38.
-
-    e) Run P1_grid.py and good luck!
+e) Run P1_grid.py and good luck!
 
 ## Notes
 - The benchmarks are built in as their own optimiser functions. BAU
