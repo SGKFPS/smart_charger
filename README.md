@@ -14,7 +14,8 @@ a linear programming package.
 * [Structure](https://github.com/st-FPS/Smart_charging_prototypes#structure)
 * [Inputs](https://github.com/st-FPS/Smart_charging_prototypes#inputs)
 * Outputs (tbc)
-* [Getting Started](https://github.com/st-FPS/Smart_charging_prototypes#getting-started)
+* [Getting Started](https://github.com/st-FPS/Smart_charging_prototypes#getting-started-with-single-branch)
+* [Getting Started with Multiple Branches](https://github.com/st-FPS/Smart_charging_prototypes#getting-started-with-multiple-branches)
 * [Notes](https://github.com/st-FPS/Smart_charging_prototypes#notes)
 
 ## Required Packages
