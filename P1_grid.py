@@ -36,7 +36,7 @@ print('Profiles done')
 
 # journeys = pickle.load(open('Outputs/journeys_range','rb'))
 # empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
-grid_file = open(grid_file_path,'a')
+grid_file = open(grid_file_path, 'a')
 grid_file.write(
     'run,Charger 1,Charger 2,Capacity (kW),Runtime,Battery Use,'
 )
@@ -51,7 +51,7 @@ grid_file.close()
 for charger in charger_power:
     for capacity in caps:
         script_strt = time.process_time()
-        print('Run:',run,'/ Charger:',charger,'/ Capacity:',capacity)
+        print('Run:', run, '/ Charger:', charger, '/ Capacity:', capacity)
         site_capacity = {
             'opt': capacity,  # kWh (in a half-hour period so eq. 100 kW)
             'BAU': 10000,

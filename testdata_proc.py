@@ -44,30 +44,50 @@ def prep_data(path, category):
     return journeys
 
 
-def prep_data_JLP(path, category):
+def prep_data_JLP(path):
     """Preprocess journey data from JLP stores
 
-    Formats datetimes, selects vans, gets next departure/previous arrival
+    Formats datetimes, gets next departure/previous arrival
 
     Args:
         path (str): filepath of journey data
-        category (str): 'PROT' or 'TEST'
 
     Returns:
         DataFrame: table of all journeys
     """
-    all_files = glob.glob(path)
-    journeys = pd.concat(
-        (pd.read_csv(f, usecols=gv.IMPORT_COLS) for f in all_files))
-    journeys['Start_Time_of_Route'] = pd.to_datetime(
-        journeys['Start_Time_of_Route'])
-    journeys['date'] = journeys['Start_Time_of_Route'].dt.date
-    journeys['End_Time_of_Route'] = pd.to_datetime(
-        journeys['End_Time_of_Route'])
-    journeys = get_prev_arrival(journeys)
-    journeys.sort_values(by=['date', 'Route_ID'], inplace=True)
-    journeys.set_index(['date', 'Route_ID'], inplace=True)
-    return journeys
+    journeys_all = pd.read_csv(
+        path,
+        parse_dates=['Start_Date_of_Route', 'Start_Time_of_Route',
+                     'End_Time_of_Route'],
+        dayfirst=True)
+    branches = journeys_all['Branch_ID'].unique()
+    journeys_all['date'] = pd.to_datetime(
+        journeys_all['Start_Date_of_Route']).dt.date
+    journeys_all['Start_Time_of_Route'] = (
+        journeys_all['Start_Time_of_Route'] - dt.datetime(1900,1,1))
+    journeys_all['Start_Time_of_Route'] = (
+        journeys_all['Start_Time_of_Route']
+        + journeys_all['Start_Date_of_Route'])
+    journeys_all['End_Time_of_Route'] = (
+        journeys_all['End_Time_of_Route'] - dt.datetime(1900,1,1))
+    journeys_all['End_Time_of_Route'] = (
+        journeys_all['End_Time_of_Route']
+        + journeys_all['Start_Date_of_Route'])
+    journeys_all['Route_Time'] = (
+        journeys_all['End_Time_of_Route']
+        - journeys_all['Start_Time_of_Route']).dt.total_seconds()/3600
+
+    jour = {}
+    for branch in branches:
+        jour[branch] = journeys_all[journeys_all['Branch_ID']==branch]
+        jour[branch] = get_prev_arrival(jour[branch])
+        jour[branch].sort_values(by=['date', 'Route_ID'], inplace=True)
+        jour[branch].set_index(['date', 'Route_ID'], inplace=True)
+        jour[branch]['Energy_Required'] = (
+            jour[branch]['Planned_total_Mileage']
+            *gv.VSPEC[gv.STORE_SPEC[branch]['V']]['D']
+            +jour[branch]['Route_Time']*gv.REF_CONS)
+    return jour
 
 
 def limit_vehicles_multishift(journeys, category):
@@ -117,12 +137,12 @@ def get_prev_arrival(journeys):
             van_journeys.loc[idx, 'Next_Departure'] = next_departure
             next_departure = van_journeys.loc[idx, 'Start_Time_of_Route']
         van_journeys.sort_values(by=['Start_Time_of_Route'], inplace=True)
-        previous_arrival = dt.datetime.combine(
-            min(journeys['date']),
-            dt.datetime.min.time())
-        for idx in van_journeys.index:
-            van_journeys.loc[idx, 'Previous_Arrival'] = previous_arrival
-            previous_arrival = van_journeys.loc[idx, 'End_Time_of_Route']
+        # previous_arrival = dt.datetime.combine(
+        #     min(journeys['date']),
+        #     dt.datetime.min.time())
+        # for idx in van_journeys.index:
+        #     van_journeys.loc[idx, 'Previous_Arrival'] = previous_arrival
+        #     previous_arrival = van_journeys.loc[idx, 'End_Time_of_Route']
         van_journeys_list.append(van_journeys)
     return pd.concat(van_journeys_list)
 
@@ -193,6 +213,32 @@ def clean_pricing(path):
     pricing.rename(columns={'unit_rate_excl_vat': 'Electricity_Price'},
                    inplace=True)
     return pricing
+
+def BAU_pricing(jour):
+    """Creates a df of pricing data just for BAU
+
+    Args:
+        journeys (DataFrame): dictionary of journeys
+
+    Returns:
+        DataFrame: schedule with fake pricing data
+    """
+    journeys = pd.concat(jour)
+    start_range = dt.datetime.combine(min(
+        journeys.index.get_level_values('date').date),
+        gv.CHAR_ST)
+    end_range = dt.datetime.combine(max(
+        journeys.index.get_level_values('date').date),
+        gv.CHAR_ST)
+    num_tp = int((end_range - start_range).total_seconds()
+                 / gv.TIME_INT.total_seconds())
+    tps = [start_range + i*gv.TIME_INT for i in range(num_tp)]
+    df = pd.DataFrame(columns = ['from','Time_Price'])
+    df['from'] = tps
+    df['Time_Price'] = list(range(len(df)))
+    df['Time_Price'] = df['Time_Price'] / 1000
+    df['Electricity_Price'] = gv.EPRICE
+    return df
 
 
 def create_range_times(time_range, eprice):

@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 import plotly.io as pio
 
 
-def summary_outputs(profile, journeys, cap, status):
+def summary_outputs(profile, journeys, cap, status, veh):
     """Creates summary columns and dataframes from outputs
 
     Args:
@@ -18,12 +18,14 @@ def summary_outputs(profile, journeys, cap, status):
         journeys (DataFrame): all the journey information for all routes
         cap (float): max. site capacity
         status (DataFrame): level of optimisation for each day
+        veh (DataFrame): vehicle in use
 
     Returns:
         DataFrames: dfs corresponding to overall profile, site
             site aggregation, day summary and global summary.
     """
     cols = gv.CAT_COLS
+    battery_cap = gv.VSPEC[veh]['C']
     vehicles = profile.index.get_level_values(1).unique()
     range_profile = profile.fillna(0)
     for ca in gv.CATS:
@@ -35,12 +37,12 @@ def summary_outputs(profile, journeys, cap, status):
             * range_profile[cols['PRICE']['opt']])
         for vehicle in vehicles:
             range_profile.loc[(slice(None), vehicle), cols['SOC'][ca]] = (
-                gv.BATTERY_CAPACITY
+                battery_cap
                 + range_profile.loc[
                     (slice(None), vehicle), cols['CHARGE_DEL'][ca]].cumsum()
                 + range_profile.loc[
                     (slice(None), vehicle), 'Battery_Use'].cumsum()
-                )*100/gv.BATTERY_CAPACITY
+                )*100/battery_cap
 
     # Sum all vehicles, per time period
     site = range_profile.groupby(level=0).sum()
@@ -175,8 +177,8 @@ def daily_summary_plot(summary):
     cols = gv.CAT_COLS
     axs[0].plot(
         x,
-        summary[cols['OUTPUT']['opt']]/gv.TIME_FRACT,
-        label=gv.LABELS['opt'],
+        summary[cols['OUTPUT'][gv.CATS[0]]]/gv.TIME_FRACT,
+        label=gv.LABELS[gv.CATS[0]],
         color='tab:red'
         )
     for ca in cats:
@@ -364,7 +366,8 @@ def createHeatmap(profile):
         for j, tp in enumerate(timeperiods):
             fulldt = dt.datetime.combine(date, tp)
             if fulldt in profile.index:
-                loads[j, i] = profile.loc[fulldt,'Output_Opt']
+                loads[j, i] = 2*profile.loc[
+                    fulldt, gv.CAT_COLS['OUTPUT'][gv.CATS[0]]]
 
     # use loads, dates, and timeperiods as your data
     fig = go.Figure(data=go.Heatmap(

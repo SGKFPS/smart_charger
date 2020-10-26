@@ -2,22 +2,25 @@
 # Created 1 September 2020
 
 import datetime as dt
+import os
 
-NUM_VEHICLES = 10
+# NUM_VEHICLES = 10
 NUM_FAST_CH = 5
 TIME_INT = dt.timedelta(minutes=30)
-START_DT = dt.datetime(2019, 3, 1, 0, 0, 0)
-#TIME_RANGE = dt.timedelta(weeks=52, days=4)
-TIME_RANGE = dt.timedelta(weeks=0,days=4)
+START_DT = dt.datetime(2020, 3, 21, 0, 0, 0)
+TIME_RANGE = dt.timedelta(weeks=30, days=4)
+# TIME_RANGE = dt.timedelta(weeks=0,days=4)
 DAY = START_DT
 
 CHARGER_EFF = 0.9
-BATTERY_CAPACITY = 75  # kWh
+# BATTERY_CAPACITY = 75  # kWh
 MARGIN_SOC = 0.1  # Required SOC will be 10% more than planned
-CATS = ['opt'] #, 'BAU', 'BAU2']
+CATS = ['BAU']  # 'opt' 'BAU', 'BAU2']
 CHAR_ST = dt.time(11, 0, 0)  # FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=11)
 DAY_INTERVALS = 48
+EPRICE = 14  # (p) Temp value #FIXME
+REF_CONS = 0.5
 
 # Select set of vans to use for prototyping or testing.
 VANS = {
@@ -34,7 +37,7 @@ VANS = {
     }
 
 CATEGORY = 'PROT'
-NUM_CHARGERS = NUM_VEHICLES
+# NUM_CHARGERS = NUM_VEHICLES
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
 # POWER_INT = CHARGER_POWER * TIME_FRACT
 
@@ -118,14 +121,124 @@ LABELS = {
     'BAU': 'Unconstrained benchmark',
     'BAU2': 'Constrained benchmark'
  }
-data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.csv"
-pricing_path = r"Inputs/Octopus Agile Rates_2019_LON.csv"
+data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.hcsv"
+# pricing_path = r"Inputs/Octopus Agile Rates_2019_LON.csv"
+pricing_path = r'Inputs/20-06.JLP.current_forecast_tariff_2019.02.BF.csv'
+LOGS = os.path.join('Outputs', 'LogsJLP')
+multi_journey_path = r'../Journey_analysis/JLP2/Outputs/allocated_journeys.csv'
 
-# Column names
-SOC = {}
-for i in range(NUM_VEHICLES):
-    SOC[i] = 'SOC_{}'.format(i)
 
-Power_output = {}
-for i in range(NUM_VEHICLES):
-    Power_output[i] = 'Output_{}'.format(i)
+# # Column names
+# SOC = {}
+# for i in range(NUM_VEHICLES):
+#     SOC[i] = 'SOC_{}'.format(i)
+
+# Power_output = {}
+# for i in range(NUM_VEHICLES):
+#     Power_output[i] = 'Output_{}'.format(i)
+
+VSPEC = {
+    'Vivaro_LR':{
+        'D':0.29,   # Quoted kWh/mile
+        'C':75,     # Quoted pack capacity
+        'P':1000,    # Payload
+        'N':'Volkswagen eCrafter',
+        'color':'tab:green',
+        'Ref':0.5
+    },
+    'Arrival44':{
+        'D':0.436,   # Quoted kWh/mile 80%
+        #'D':0.545,   # Quoted kWh/mile 100%
+        'C':44,     # Quoted pack capacity
+        'P':2225,    # Payload
+        'R':80.8,
+        'N':'Arrival 44kW',
+        'color':'tab:green',
+        'Ref':0.5,
+        'df':'df_44'
+    },
+    'Arrival67':{
+        'D':0.479,   # Quoted kWh/mile 80%
+        #'D':0.599,   # Quoted kWh/mile 100%
+        'C':67,     # Quoted pack capacity
+        'P':2017,    # Payload
+        'R':111.8,
+        'N':'Arrival 67kW',
+        'color':'tab:orange',
+        'Ref':0.5,
+        'df':'df_67'
+    },
+    'Arrival89':{
+        'D':0.477,   # Quoted kWh/mile 80%
+        #'D':0.597,   # Quoted kWh/mile 100%
+        'C':89,     # Quoted pack capacity
+        'P':1818,    # Payload
+        'R':149,
+        'N':'Arrival 89kW',
+        'color':'tab:red',
+        'Ref':0.5,
+        'df':'df89'
+    },
+    'Arrival111':{
+        'D':0.493,   # Quoted kWh/mile 80%
+        #'D':0.616,   # Quoted kWh/mile 100%
+        'C':111,     # Quoted pack capacity
+        'P':1619,    # Payload
+        'R':180,
+        'N':'Arrival 111kW',
+        'color':'tab:purple',
+        'Ref':0.5,
+        'df':'df_111'
+    },
+    'Arrival133':{
+        'D':0.504,   # Quoted kWh/mile 80%
+        #'D':0.630,   # Quoted kWh/mile 100%
+        'C':133,     # Quoted pack capacity
+        'P':1420,    # Payload
+        'R':211,
+        'N':'Arrival 130kW',
+        'color':'tab:olive',
+        'Ref':0.5,
+        'df':'df_133'
+    },
+    'Sprinter':{
+        'D':0.149542468,   # Quoted l/mile
+        'C':2000,    # Very high mock value to remove constraint
+        'P':1235,    # Payload
+        'N':'Mercedes Sprinter PV',
+        'color':'tab:olive',
+        'price':36775,
+        'Ref':0.162
+    }
+}
+
+STORE_SPEC = {
+   193:{
+      'V':'Arrival44',
+      'CH':[7, 7]
+   },
+   194:{
+      'V':'Arrival89',
+      'CH':[7, 7]
+   },
+   199:{
+      'V':'Arrival67',
+      'CH':[7, 7]
+   },
+   211:{
+      'V':'Arrival89',
+      'CH':[7, 7]
+   },
+   226:{
+      'V':'Arrival133',
+      'CH':[7, 7]
+   },
+   457:{
+      'V':'Arrival133',
+      'CH':[7, 7]
+   },
+   513:{
+      'V':'Arrival111',
+      'CH':[7, 7]
+   }
+}
