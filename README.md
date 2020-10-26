@@ -35,6 +35,11 @@ and runs a grid search for each combination of charger, site capacity.
 It then produces outputs from daily and global aggregation and saves to
 an Output folder
 
+- Multi_store_grid_SC.py:
+
+This is an alternative 'main file'. In this case the scrip searches
+over a set of branches, for a single charger/capacity per branch.
+
 - lin_prog_functions.py
 
 This includes all the linear programming functions:
@@ -77,44 +82,72 @@ The current file we're using for 2019 Coulsdon Waitrose CFC data.
 
 Electricity pricing for each half hour period (in pence).
 
-## Getting Started
+- Allocation for multiple branches can be found in Azure (Z:\R&D Project Data\WEVC - Data Analytics Stream\WP7 - Historic Journey & Order Analysis\D7.1 - Feasibility, Cost and Emission Study\Study Outputs\Results\10.WEVC.allocated_journeys_focus.02.ST.csv)
 
-1) Modify global_variavels.py:
+## Getting Started with single branch:
 
-    1) Modify lines 108 and 109 with your file paths for journeys and
-   pricing.
+1) Modify global_variables.py:
 
-    1) Modify lines 6 and 7 with number of vehicles and number of fast
-       chargers
+    1) Line 123: Modify with your journey data file. This is meant to
+       concatenate several files so you can use the * for wildcard
 
-    1) Modify lines 9 and 12 for your range start time (sorry, you have
-       to do both!)
+    1) Line 124: Modify with path for pricing file
 
-    1) Modify line 10 for your time range to study
+    2) Line 7-8: modify with number of vehicles and fast chargers
 
-    1) If you want to calculate a benchmark, uncomment them from the
-       list in line 17 (but think about using a single charger power)
+    3) Line 10: your range start time
 
-    1) Change battery capacity to your vehicle spec
+    4) Line 11 (or 12): your time range to study (start with a week to get something fast)
 
-2) Modify P1_grid.py
+    5) Line 17: likely you just want to put `['opt']`. This is the list of categories to run ('opt' is smart charging, 'BAU' and 'BAU2' are the two benchmarks)
 
-    1) Line 22: Manually adjust the run # (to one that doesn't exist
-   yet). This is for logging purposes.
+    6) Lines 133-139: if you want, change the specifications of the Vivaro LR
 
-    1) Line 24: Select your chargers to use. This is in the shape of a
-   list of lists, so `[[11,11], [22,22], [11,22]]` will perform a search 
+2) Create the `Outputs\Logs\` folders
+
+3) Modify P1_grid.py
+
+    1) Line 22: Manually adjust the run # (to one that doesn't exist yet). This is for logging purposes.
+
+    2) Lines 23, 24: change branch to use (just for logging, this won't change anything)
+
+    3) Line 25: Select your chargers to use. This is in the shape of a
+   list of lists, so `[[11,11], [22,22], [11,22]]` will perform a search
    with all 11 kW chargers, all 22 kW chargers and a mix of 11 and 22 kW.
 
-    1) Line 25: List of site capacities to include in your grid search
+    1) Line 26: List of site capacities to include in your grid search
 
-    1) Lines 28-35: If you don't have the profiles already, leave them
+    2) Lines 30-37: If you don't have the profiles already, leave them
    uncommented. If you have already generated it from the
-   testdata_proc.py file, comment them and use lines 37-38.
+   testdata_proc.py file, comment them and use lines 39-40.
 
     1) Run P1_grid.py and good luck!
-    
- 1) Create the `Outputs\Logs\` folders
+
+## Getting Started with multiple branches:
+
+1) Modify global_variables.py:
+
+    1) Line 129: Modify with your journey data file (includes all branches)
+
+    2) Line 10: range start time (if you choose to crop the journeys to a specific range)
+
+    3) Line 11 (or 12): time range to study (start with a week to get something fast)
+
+    4) Line 17: likely you just want to put `['BAU']`. This is the list of categories to run ('opt' is smart charging, 'BAU' and 'BAU2' are the two benchmarks)
+
+    5) Lines 141-203: if you want, change the specifications of the Arrival vans
+    6) Lines 207-235: change the vans and chargers to use in each store (or comment out stores you don't want to run)
+
+2) Create the `Outputs\LogsJLP\` folders
+
+3) Modify Multi_store_gridSC.py
+
+    1) Line 21: Manually adjust the run # (to one that doesn't exist yet). This is for logging purposes.
+
+    2) Lines 24-40: If you don't have the profiles already, leave them
+   uncommented. If you have already generated them in a previous run, comment them and use lines 42-45.
+
+    1) Run Multi_store_gridSC.py and good luck!
 
 ## Notes
 - The benchmarks are built in as their own optimiser functions. BAU

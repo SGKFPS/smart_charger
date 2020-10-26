@@ -1,5 +1,6 @@
-# Data processing functions for testing optimiser
-# Started 1 Sept 2020
+# Data processing functions for testing optimiser. Phase 2
+# Cloned from Phase 1, 26 October 2020
+# Sofia Taylor, Flexible Power Systems
 
 import numpy as np
 from numpy.core.fromnumeric import shape
@@ -32,7 +33,6 @@ def prep_data(path, category):
     journeys['Start_Time_of_Route'] = pd.to_datetime(
         journeys['Start_Time_of_Route'])
     journeys['date'] = journeys['Start_Time_of_Route'].dt.date
-    num_vehicles = journeys.groupby('date').max()['vannumber_ev_']  #FIXME do I need this?
     journeys.rename(columns={'vannumber_ev_': 'Vehicle_ID'}, inplace=True)
     journeys = limit_vehicles_multishift(journeys, category)
     journeys['End_Time_of_Route'] = pd.to_datetime(
@@ -285,7 +285,6 @@ def create_empty_schedule(journeys, eprice):
     vehicles = journeys['Vehicle_ID'].unique()
     veh_profiles_list = []
     for vehicle in vehicles:
-        print('Vehicle:', vehicle)
         veh_profile = create_range_times(
             time_range,
             eprice)

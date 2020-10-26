@@ -19,12 +19,14 @@ import random
 import os
 
 # Variables for grid search
-run = 128
+run = 130
+branch = 513
 # Chargers to use in the grid, in kW
 charger_power = [[11, 22], [7, 45]]  # [[11,11], [22,22], [7,22], [11,22]
 caps = [60]  # 40, 120, 100, 150 300 100 200
-grid_file_path = 'Outputs/Logs/grid_variables{}.csv'.format(run)
-
+grid_file_path = os.path.join(gv.LOGS1,
+                              r'grid_search{}.csv'.format(run))
+of.create_grid_file(grid_file_path)  # Creates a summary file
 journeys = pf.prep_data(gv.data_path, gv.CATEGORY)
 print('All journeys done')
 journeys = pf.get_range_data(journeys, gv.DAY, gv.TIME_RANGE)
@@ -36,29 +38,19 @@ print('Profiles done')
 
 # journeys = pickle.load(open('Outputs/journeys_range','rb'))
 # empty_profile = pickle.load(open('Outputs/empty_profile','rb'))
-grid_file = open(grid_file_path, 'a')
-grid_file.write(
-    'run,Charger 1,Charger 2,Capacity (kW),Runtime,Battery Use,'
-)
-for ca in gv.CATS:
-    grid_file.write(str(gv.CAT_COLS['OUTPUT'][ca] + ','))
-    grid_file.write(str(gv.CAT_COLS['CHARGE_DEL'][ca] + ','))
-    grid_file.write(str(gv.CAT_COLS['ECOST'][ca] + ','))
-    grid_file.write(str(gv.CAT_COLS['BREACH'][ca] + ','))
-grid_file.write('Main,Tonext,Breach,Magic,Empty')
-grid_file.close()
 
 for charger in charger_power:
     for capacity in caps:
-        script_strt = time.process_time()
+        script_strt = time.process_time()  # Capture start time
+        run_dir = os.path.join(gv.LOGS1, 'run{}'.format(run))
+        os.makedirs(os.path.join(run_dir,'daily'))
         print('Run:', run, '/ Charger:', charger, '/ Capacity:', capacity)
         site_capacity = {
             'opt': capacity,  # kWh (in a half-hour period so eq. 100 kW)
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = """Test 10 vehicles. Opt only."""
-        os.makedirs('Outputs/Logs/run{}'.format(run))
+        notes = """Test new changes"""
         profile_out, dates, bad_days, lpprob, status = lpf.optimise_range2(
             empty_profile,
             charger,
@@ -71,73 +63,55 @@ for charger in charger_power:
 
         ################ OUTPUTS ####################
         # Make and save daily figures
-        os.makedirs('Outputs/Logs/run{}/daily'.format(run))
         for date in dates:
             day = dt.datetime.combine(date, dt.datetime.min.time())
             day_profile = of.create_daily_summary(site_profile, day)
             fig_summary = of.summary_plot(day_profile)
-            fig_summary.savefig(
-                'Outputs/Logs/run{}/daily/fig{}.jpg'.format(run,date))
+            fig_summary.savefig(os.path.join(
+                run_dir, 'daily', 'fig{}.jpg'.format(date)))
             plt.close(fig_summary)
         #Scatter plot
         fig_scatter_outputs = of.scatter_plot(site_profile)
         fig_scatter_outputs.savefig(
-            'Outputs/Logs/run{}/opt_scatter{}.jpg'.format(run,run),
+            os.path.join(run_dir, 'opt_scatter{}.jpg'.format(run)),
             bbox_inches = "tight")
         plt.close(fig_scatter_outputs)
 
         range_fig = of.daily_summary_plot(days_summary.fillna(0))
         range_fig.savefig(
-            'Outputs/Logs/run{}/fig_range{}.svg'.format(run,run),
+            os.path.join(run_dir, 'fig_range{}.svg'.format(run)),
             bbox_inches = "tight")
         plt.close(range_fig)
 
         heatplot = of.createHeatmap(site_profile)
         heatplot.write_image(
-            'Outputs/Logs/run{}/heatplot{}.png'.format(run,run),
+            os.path.join(run_dir, 'heatplot{}.png'.format(run)),
             width=1800, height=1000)
-        heatplot.write_html("Outputs/Logs/run{}/heatplot{}.html".format(run,run))
+        heatplot.write_html(
+            os.path.join(run_dir, "heatplot{}.html".format(run)))
 
         # Create a list of settings
-        with open('global_variables.py','r') as f:
-            global_variables = f.read()
-
-        with open('Outputs/Logs/run{}/variables{}.csv'.format(run,run),'a') as fi:
-            fi.write(notes)
-            fi.write('\n' + str(run)+','+str(charger) + ',' + str(capacity) +'\n')
-            fi.write(global_summary.to_string())
-            fi.write(bad_days)
-            fi.write('\n \n global_variables.py:\n')
-            fi.write(global_variables)
+        of.create_settings_file(run, run_dir, notes, charger, capacity,
+                                branch, global_summary, bad_days)
 
         # Write problem to an .lp file
-        lpprob['opt'].writeLP("Outputs/Logs/run{}/multi_vehicle.lp".format(run))
+        lpprob['opt'].writeLP(os.path.join(
+            run_dir, "multi_vehicle.lp"))
 
         # Save dataframes
-        pickle.dump(range_profile,open('Outputs/Logs/run{}/range_profiles{}'.format(run,run),'wb'))
-        pickle.dump(site_profile,open('Outputs/Logs/run{}/site_summary{}'.format(run,run),'wb'))
-        pickle.dump(days_summary,open('Outputs/Logs/run{}/days_summary'.format(run),'wb'))
-        pickle.dump(status,open('Outputs/Logs/run{}/status'.format(run),'wb'))
+        pickle.dump(range_profile,open(
+            os.path.join(run_dir, 'range_profiles'), 'wb'))
+        pickle.dump(site_profile,open(
+            os.path.join(run_dir, 'site_summary'), 'wb'))
+        pickle.dump(days_summary,open(
+            os.path.join(run_dir, 'days_summary'),'wb'))
+        pickle.dump(status,open(
+            os.path.join(run_dir, 'status'),'wb'))
         runtime = time.process_time() - script_strt
         print('Range:', gv.TIME_RANGE, 'Time:',time.process_time(),'Runtime:',runtime)
 
-        grid_file = open(grid_file_path,'a')
-        grid_file.write('\n' + str(run) +','
-                        + str(charger[0]) + ',' + str(charger[1]) + ',' + str(capacity) +',')
-        grid_file.write(str(runtime) + ',')
-        grid_file.write(str(global_summary['Battery_Use']) + ',')
-
-        for ca in gv.CATS:
-            grid_file.write(str(global_summary[gv.CAT_COLS['OUTPUT'][ca]]) + ',')
-            grid_file.write(str(global_summary[gv.CAT_COLS['CHARGE_DEL'][ca]]) + ',')
-            grid_file.write(str(global_summary[gv.CAT_COLS['ECOST'][ca]]) + ',')
-            grid_file.write(str(global_summary[gv.CAT_COLS['BREACH'][ca]]) + ',')
-        for l in gv.LEVELS:
-            if l in global_summary.index:
-                grid_file.write(str(global_summary[l]) + ',')
-            else:
-                grid_file.write('0,')
-        grid_file.close()
+        of.write_grid_file(grid_file_path, run, branch, charger, capacity,
+                           runtime, global_summary, notes)
         run += 1
 
 

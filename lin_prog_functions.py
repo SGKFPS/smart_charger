@@ -21,7 +21,7 @@ def optimise_range2(empty_profile, charger, capacity,
         empty_profile (DataFrame): MultiIndex profile of each vehicle
                                     / time period
         charger (list): list of charger powers
-        capacity (int): max allowed site capacity
+        capacity (int): dict. of max allowed site capacity per category
         veh (str): type of vehicle to use in optimisation. Def Vivaro
 
     Returns:
@@ -77,7 +77,7 @@ def optimise_range2(empty_profile, charger, capacity,
                     dates_status.loc[day, ca]) = linear_optimiser_V4(
                     day_profile, ca,
                     charger[0], charger[1],
-                    capacity, rel_charge[ca], next_req,
+                    capacity[ca], rel_charge[ca], next_req,
                     battery_cap)
                 day_profile_out = day_profile_out.merge(
                     output_df[ca],
@@ -208,7 +208,7 @@ def charge_tonextday(profile, ca, charger1, charger2,
         time_veh = list(profile_av.loc[period].index)
         prob += (lpSum(
             [outputs[period, vehicle] for vehicle in time_veh])
-            <= capacity[ca] * gv.TIME_FRACT)
+            <= capacity * gv.TIME_FRACT)
         prob += lpSum(
             [ch_assignment[profile_av.loc[(period, vehicle), 'Session']]
                 for vehicle in time_veh]) <= gv.NUM_FAST_CH
@@ -352,7 +352,7 @@ def charge_tonextday_breach(profile, ca, charger1, charger2,
         time_veh = list(profile_av.loc[period].index)
         prob += lpSum(  # Max capacity constraint
             [outputs[period, vehicle] for vehicle in time_veh]) <= (
-                1 + time_breaches[period]) * capacity[ca] * gv.TIME_FRACT
+                1 + time_breaches[period]) * capacity * gv.TIME_FRACT
         prob += lpSum(  # Max number of fast chargers
             [ch_assignment[profile_av.loc[(period, vehicle), 'Session']]
                 for vehicle in time_veh]
@@ -475,7 +475,7 @@ def charge_incomplete(profile, ca, charger1, charger2,
     for period in time_periods:
         time_veh = list(profile_av.loc[period].index)
         prob += (lpSum([outputs[period, vehicle] for vehicle in time_veh])
-                 <= capacity[ca] * gv.TIME_FRACT)
+                 <= capacity * gv.TIME_FRACT)
         prob += lpSum(
             [ch_assignment[profile_av.loc[(period, vehicle), 'Session']]
                 for vehicle in time_veh]) <= gv.NUM_FAST_CH
@@ -643,7 +643,7 @@ def linear_optimiser_V4(profile, ca, charger1, charger2,
         time_veh = list(profile_av.loc[period].index)
         prob += lpSum(
             [outputs[period, vehicle] for vehicle in time_veh]) <= (
-                capacity[ca] * gv.TIME_FRACT)
+                capacity * gv.TIME_FRACT)
         prob += lpSum(
             [ch_assignment[profile_av.loc[(period, vehicle), 'Session']]
                 for vehicle in time_veh]) <= gv.NUM_FAST_CH

@@ -1,4 +1,7 @@
 # Output functions for smart charging algorithm
+# Cloned from Phase 1 on 26 October 2020
+# Sofia Taylor, Flexible Power Systems
+
 import numpy as np
 import global_variables as gv
 import pandas as pd
@@ -8,9 +11,10 @@ import matplotlib.dates as mdates
 import matplotlib.font_manager as font_manager
 import plotly.graph_objects as go
 import plotly.io as pio
+import os
 
 
-def summary_outputs(profile, journeys, cap, status, veh):
+def summary_outputs(profile, journeys, cap, status, veh='Vivaro_LR'):
     """Creates summary columns and dataframes from outputs
 
     Args:
@@ -384,3 +388,83 @@ def createHeatmap(profile):
     fig.show()
     return fig
 
+def create_grid_file(path):
+    """Creates a csv file with correct headers
+
+    Args:
+        path (string): relative file path for grid file
+    """
+    grid_file = open(path, 'a')
+    grid_file.write(
+        'run,Branch_ID,Charger 1,Charger 2,Capacity (kW),Runtime,Battery Use,'
+    )
+    for ca in gv.CATS:
+        grid_file.write(str(gv.CAT_COLS['OUTPUT'][ca] + ','))
+        grid_file.write(str(gv.CAT_COLS['CHARGE_DEL'][ca] + ','))
+        grid_file.write(str(gv.CAT_COLS['ECOST'][ca] + ','))
+        grid_file.write(str(gv.CAT_COLS['BREACH'][ca] + ','))
+    grid_file.write('Main,Tonext,Breach,Magic,Empty')
+    grid_file.write(',Notes')
+    grid_file.close()
+    return
+
+
+def write_grid_file(path, run, branch, charger, cap,
+                    runtime, global_summary, notes):
+    """Write settings and results to the grid file
+
+    Args:
+        path (str): relative file path for grid file
+    """
+    grid_file = open(path, 'a')
+    grid_file.write('\n' + str(run) + ',' + str(branch) + ','
+                    + str(charger[0]) + ',' + str(charger[1])  + ','
+                    + str(cap) + ',')
+    grid_file.write(str(runtime) + ',')
+    grid_file.write(str(global_summary['Battery_Use']) + ',')
+
+    for ca in gv.CATS:
+        grid_file.write(
+            str(global_summary[gv.CAT_COLS['OUTPUT'][ca]]) + ',')
+        grid_file.write(
+            str(global_summary[gv.CAT_COLS['CHARGE_DEL'][ca]]) + ',')
+        grid_file.write(
+            str(global_summary[gv.CAT_COLS['ECOST'][ca]]) + ',')
+        grid_file.write(
+            str(global_summary[gv.CAT_COLS['BREACH'][ca]]) + ',')
+    for l in gv.LEVELS:
+        if l in global_summary.index:
+            grid_file.write(str(global_summary[l]) + ',')
+        else:
+            grid_file.write('0,')
+    grid_file.write(notes)
+    grid_file.close()
+    return
+
+def create_settings_file(run, run_dir, notes, charger, cap, branch,
+                         global_summary, bad_days):
+    """Create a list of settings
+
+    Args:
+        run (int): id. for this script run
+        run_dir (str): file path for this run's folder
+        notes (str): Any notes generated in the script
+        charger (int): list of charger powers (usually 2)
+        cap (int): site capacity
+        branch (int): branch ID
+        global_summary (Series): generated from summary_outputs
+        bad_days (str): list of all 'unusual' days and their descript.
+    """
+    with open('global_variables.py','r') as f:
+        global_variables = f.read()
+
+    with open(os.path.join(
+        run_dir, 'variables{}.csv'.format(run)),'a') as fi:
+        fi.write(notes)
+        fi.write('\n' + str(run) + ',' + str(charger) + ',' + str(cap)
+                 + str(branch) + '\n')
+        fi.write(global_summary.to_string())
+        fi.write(bad_days)
+        fi.write('\n \n global_variables.py:\n')
+        fi.write(global_variables)
+        return

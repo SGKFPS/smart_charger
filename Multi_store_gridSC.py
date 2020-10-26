@@ -18,8 +18,9 @@ import time
 import random
 import os
 
-run = 2
-note = 'First test for JLP Study 2'
+run = 22
+notes = 'New time of day "break" at 8am'
+
 # jour = pf.prep_data_JLP(gv.multi_journey_path)
 # pickle.dump(jour, open('Outputs/LogsJLP/all_journeys', 'wb'))
 # print('All journeys done')
@@ -30,8 +31,10 @@ note = 'First test for JLP Study 2'
 
 # empty_profs = {}
 # for branch in gv.STORE_SPEC.keys():
+#     journeys = jour[branch]
+#     # journeys = pf.get_range_data(jour[branch], gv.DAY, gv.TIME_RANGE)
 #     empty_profs[branch] = pf.create_empty_schedule(
-#         jour[branch], price_data)
+#         journeys, price_data)
 #     print('Profiles done for {}'.format(branch))
 # pickle.dump(empty_profs,
 #             open(os.path.join(gv.LOGS, r'empty_profiles'), 'wb'))
@@ -44,17 +47,7 @@ jour = pickle.load(
 # Initialise grid search file
 grid_file_path = os.path.join(gv.LOGS,
                               r'JLPbranches{}.csv'.format(run))
-grid_file = open(grid_file_path,'a')
-grid_file.write(
-    'run,Branch_ID,Charger,Capacity (kW),Runtime,Battery Use,'
-)
-for ca in gv.CATS:
-    grid_file.write(str(gv.CAT_COLS['OUTPUT'][ca] + ','))
-    grid_file.write(str(gv.CAT_COLS['CHARGE_DEL'][ca] + ','))
-    grid_file.write(str(gv.CAT_COLS['ECOST'][ca] + ','))
-    grid_file.write(str(gv.CAT_COLS['BREACH'][ca] + ','))
-grid_file.write('Main,Tonext,Breach,Magic,Empty')
-grid_file.close()
+of.create_grid_file(grid_file_path)
 
 for branch in gv.STORE_SPEC.keys():
     script_strt = time.process_time()
@@ -97,30 +90,19 @@ for branch in gv.STORE_SPEC.keys():
     plt.close(range_fig)
 
     heatplot = of.createHeatmap(site_profile)
-    heatplot.write_image(os.path.join(
-        run_dir, 'heatplot{}.png'.format(run)),
+    heatplot.write_image(
+        os.path.join(run_dir, 'heatplot{}.png'.format(run)),
         width=1800, height=1000)
-    heatplot.write_html(os.path.join(
-        run_dir, "heatplot{}.html".format(run)))
-
-    # Create a list of settings
-    with open('global_variables.py','r') as f:
-        global_variables = f.read()
-
-    with open(os.path.join(
-        run_dir, 'variables{}.csv'.format(run)),'a') as fi:
-        # fi.write(notes)
-        fi.write('\n' + str(run) + ',' + str(charger) + ',10000,'
-                 + 'Branch:' + str(branch) + '\n')
-        fi.write(global_summary.to_string())
-        fi.write(bad_days)
-        fi.write('\n \n global_variables.py:\n')
-        fi.write(global_variables)
+    heatplot.write_html(
+        os.path.join(run_dir, "heatplot{}.html".format(run)))
 
     # Write problem to an .lp file
     lpprob[gv.CATS[0]].writeLP(os.path.join(
         run_dir, "multi_vehicle.lp"))
 
+    # Create a file with notes, settings and results
+    of.create_settings_file(run, run_dir, notes, charger, 10000,
+                            branch, global_summary, bad_days)
     # Save dataframes
     pickle.dump(range_profile,
                 open(os.path.join(run_dir, 'range_profiles'), 'wb'))
@@ -133,25 +115,6 @@ for branch in gv.STORE_SPEC.keys():
     runtime = time.process_time() - script_strt
     print('Range:', gv.TIME_RANGE, 'Runtime:',runtime)
 
-    grid_file = open(grid_file_path,'a')
-    grid_file.write('\n' + str(run) +',' + str(branch)
-                    + str(charger)  + ',10000,')
-    grid_file.write(str(runtime) + ',')
-    grid_file.write(str(global_summary['Battery_Use']) + ',')
-
-    for ca in gv.CATS:
-        grid_file.write(
-            str(global_summary[gv.CAT_COLS['OUTPUT'][ca]]) + ',')
-        grid_file.write(
-            str(global_summary[gv.CAT_COLS['CHARGE_DEL'][ca]]) + ',')
-        grid_file.write(
-            str(global_summary[gv.CAT_COLS['ECOST'][ca]]) + ',')
-        grid_file.write(
-            str(global_summary[gv.CAT_COLS['BREACH'][ca]]) + ',')
-    for l in gv.LEVELS:
-        if l in global_summary.index:
-            grid_file.write(str(global_summary[l]) + ',')
-        else:
-            grid_file.write('0,')
-    grid_file.close()
+    of.write_grid_file(grid_file_path, run, branch, charger, 10000,
+                       runtime, global_summary, notes)
     run += 1

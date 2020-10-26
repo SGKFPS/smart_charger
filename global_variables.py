@@ -1,23 +1,22 @@
-# Global variables to use in all calculations
-# Created 1 September 2020
+# Global variables to use in all calculations. Phase 2
+# Created 26 October 2020
 
 import datetime as dt
 import os
 
-# NUM_VEHICLES = 10
+NUM_VEHICLES = 10
 NUM_FAST_CH = 5
 TIME_INT = dt.timedelta(minutes=30)
-START_DT = dt.datetime(2020, 3, 21, 0, 0, 0)
-TIME_RANGE = dt.timedelta(weeks=30, days=4)
-# TIME_RANGE = dt.timedelta(weeks=0,days=4)
+START_DT = dt.datetime(2019, 3, 21, 0, 0, 0)
+# TIME_RANGE = dt.timedelta(weeks=30, days=4)
+TIME_RANGE = dt.timedelta(weeks=0,days=4)
 DAY = START_DT
 
 CHARGER_EFF = 0.9
-# BATTERY_CAPACITY = 75  # kWh
 MARGIN_SOC = 0.1  # Required SOC will be 10% more than planned
-CATS = ['BAU']  # 'opt' 'BAU', 'BAU2']
-CHAR_ST = dt.time(11, 0, 0)  # FIXME Make this data dependent
-CHAR_ST_DELTA = dt.timedelta(hours=11)
+CATS = ['opt']  # 'opt' 'BAU', 'BAU2']
+CHAR_ST = dt.time(8, 0, 0)  # FIXME Make this data dependent
+CHAR_ST_DELTA = dt.timedelta(hours=8)
 DAY_INTERVALS = 48
 EPRICE = 14  # (p) Temp value #FIXME
 REF_CONS = 0.5
@@ -37,9 +36,7 @@ VANS = {
     }
 
 CATEGORY = 'PROT'
-# NUM_CHARGERS = NUM_VEHICLES
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
-# POWER_INT = CHARGER_POWER * TIME_FRACT
 
 IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
                'End_Time_of_Route', 'Energy_Required', 'vannumber_ev_']
@@ -121,21 +118,16 @@ LABELS = {
     'BAU': 'Unconstrained benchmark',
     'BAU2': 'Constrained benchmark'
  }
-data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.hcsv"
-# pricing_path = r"Inputs/Octopus Agile Rates_2019_LON.csv"
-pricing_path = r'Inputs/20-06.JLP.current_forecast_tariff_2019.02.BF.csv'
-LOGS = os.path.join('Outputs', 'LogsJLP')
+
+# For grid_P1:
+data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.csv"
+pricing_path = r"Inputs/Octopus Agile Rates_2019_LON.csv"
+# pricing_path = r'Inputs/20-06.JLP.current_forecast_tariff_2019.02.BF.csv'
+LOGS1 = os.path.join('Outputs', 'Logs')
+
+# For Multi_store_gridSC
 multi_journey_path = r'../Journey_analysis/JLP2/Outputs/allocated_journeys.csv'
-
-
-# # Column names
-# SOC = {}
-# for i in range(NUM_VEHICLES):
-#     SOC[i] = 'SOC_{}'.format(i)
-
-# Power_output = {}
-# for i in range(NUM_VEHICLES):
-#     Power_output[i] = 'Output_{}'.format(i)
+LOGS = os.path.join('Outputs', 'LogsJLP')
 
 VSPEC = {
     'Vivaro_LR':{
@@ -147,7 +139,7 @@ VSPEC = {
         'Ref':0.5
     },
     'Arrival44':{
-        'D':0.436,   # Quoted kWh/mile 80%
+        'D':0.436,   # Quoted kWh/mile 80% d.o.d
         #'D':0.545,   # Quoted kWh/mile 100%
         'C':44,     # Quoted pack capacity
         'P':2225,    # Payload
@@ -213,32 +205,32 @@ VSPEC = {
 }
 
 STORE_SPEC = {
-   193:{
-      'V':'Arrival44',
-      'CH':[7, 7]
-   },
-   194:{
-      'V':'Arrival89',
-      'CH':[7, 7]
-   },
-   199:{
-      'V':'Arrival67',
-      'CH':[7, 7]
-   },
-   211:{
-      'V':'Arrival89',
-      'CH':[7, 7]
-   },
+   # 193:{
+   #    'V':'Arrival44',
+   #    'CH':[7, 7]
+   # },
+   # 194:{
+   #    'V':'Arrival89',
+   #    'CH':[7, 7]
+   # },
+   # 199:{
+   #    'V':'Arrival67',
+   #    'CH':[11, 11]
+   # },
+   # 211:{
+   #    'V':'Arrival89',
+   #    'CH':[7, 7]
+   # },
    226:{
       'V':'Arrival133',
-      'CH':[7, 7]
+      'CH':[11, 11]
    },
    457:{
       'V':'Arrival133',
-      'CH':[7, 7]
+      'CH':[22, 22]
    },
    513:{
       'V':'Arrival111',
-      'CH':[7, 7]
+      'CH':[11, 11]
    }
 }
