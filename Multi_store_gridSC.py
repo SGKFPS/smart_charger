@@ -18,31 +18,35 @@ import time
 import random
 import os
 
-run = 22
-notes = 'New time of day "break" at 8am'
+run = 27
+notes = 'Redid 457 with 3 bad routes removed'
 
-# jour = pf.prep_data_JLP(gv.multi_journey_path)
-# pickle.dump(jour, open('Outputs/LogsJLP/all_journeys', 'wb'))
-# print('All journeys done')
+jour = pf.prep_data_JLP(gv.multi_journey_path)
+pickle.dump(jour, open('Outputs/LogsJLP/all_journeys', 'wb'))
+print('All journeys done')
 
-# price_data = pf.BAU_pricing(jour)
-# pickle.dump(price_data, open('Outputs/LogsJLP/price_data', 'wb'))
-# print('Prices done')
+price_data = pf.BAU_pricing(jour)
+pickle.dump(price_data, open('Outputs/LogsJLP/price_data', 'wb'))
+print('Prices done')
 
-# empty_profs = {}
-# for branch in gv.STORE_SPEC.keys():
-#     journeys = jour[branch]
-#     # journeys = pf.get_range_data(jour[branch], gv.DAY, gv.TIME_RANGE)
-#     empty_profs[branch] = pf.create_empty_schedule(
-#         journeys, price_data)
-#     print('Profiles done for {}'.format(branch))
-# pickle.dump(empty_profs,
-#             open(os.path.join(gv.LOGS, r'empty_profiles'), 'wb'))
+empty_profs = {}
+for branch in gv.STORE_SPEC.keys():
+    journeys = jour[branch]
+    if branch == 457:
+        for route in [3049873, 3148304, 3148321]:
+            idx = journeys.loc[(slice(None), route), :].index
+            journeys.drop(index=idx, inplace=True)
+    # journeys = pf.get_range_data(jour[branch], gv.DAY, gv.TIME_RANGE)
+    empty_profs[branch] = pf.create_empty_schedule(
+        journeys, price_data)
+    print('Profiles done for {}'.format(branch))
+pickle.dump(empty_profs,
+            open(os.path.join(gv.LOGS, r'empty_profiles'), 'wb'))
 
-empty_profs = pickle.load(
-    open(os.path.join(gv.LOGS, r'empty_profiles'), 'rb'))
-jour = pickle.load(
-    open(os.path.join(gv.LOGS, r'all_journeys'), 'rb'))
+# empty_profs = pickle.load(
+#     open(os.path.join(gv.LOGS, r'empty_profiles'), 'rb'))
+# jour = pickle.load(
+#     open(os.path.join(gv.LOGS, r'all_journeys'), 'rb'))
 
 # Initialise grid search file
 grid_file_path = os.path.join(gv.LOGS,

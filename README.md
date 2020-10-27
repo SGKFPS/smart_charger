@@ -13,7 +13,7 @@ a linear programming package.
 * [Required Packages](https://github.com/st-FPS/Smart_charging_prototypes#required-packages)
 * [Structure](https://github.com/st-FPS/Smart_charging_prototypes#structure)
 * [Inputs](https://github.com/st-FPS/Smart_charging_prototypes#inputs)
-* Outputs (tbc)
+* [Outputs (tbc)](https://github.com/st-FPS/Smart_charging_prototypes#outputs)
 * [Getting Started](https://github.com/st-FPS/Smart_charging_prototypes#getting-started)
 * [Notes](https://github.com/st-FPS/Smart_charging_prototypes#notes)
 
@@ -68,6 +68,10 @@ These are all the summary functions, aggregations and plots.
 
 ## Inputs
 Example files can be found in Azure (Z:\R&D Project Data\WEVC - Data Analytics Stream\WP8 - Smart Charging)
+
+## Outputs
+
+Examples are in Azure (Z:\R&D Project Data\WEVC - Data Analytics Stream\WP8 - Smart Charging\Outputs)
 
 - Journey data
 

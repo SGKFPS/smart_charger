@@ -8,8 +8,8 @@ NUM_VEHICLES = 10
 NUM_FAST_CH = 5
 TIME_INT = dt.timedelta(minutes=30)
 START_DT = dt.datetime(2019, 3, 21, 0, 0, 0)
-# TIME_RANGE = dt.timedelta(weeks=30, days=4)
-TIME_RANGE = dt.timedelta(weeks=0,days=4)
+TIME_RANGE = dt.timedelta(weeks=30, days=4)
+# TIME_RANGE = dt.timedelta(weeks=0,days=4)
 DAY = START_DT
 
 CHARGER_EFF = 0.9
@@ -205,32 +205,40 @@ VSPEC = {
 }
 
 STORE_SPEC = {
-   # 193:{
-   #    'V':'Arrival44',
-   #    'CH':[7, 7]
-   # },
-   # 194:{
-   #    'V':'Arrival89',
-   #    'CH':[7, 7]
-   # },
-   # 199:{
-   #    'V':'Arrival67',
-   #    'CH':[11, 11]
-   # },
-   # 211:{
-   #    'V':'Arrival89',
-   #    'CH':[7, 7]
-   # },
+   193:{
+      'V':'Arrival44',
+      'CH':[7, 7],
+      'run': 20
+   },
+   194:{
+      'V':'Arrival89',
+      'CH':[7, 7],
+      'run': 22
+   },
+   199:{
+      'V':'Arrival67',
+      'CH':[11, 11],
+      'run': 23
+   },
+   211:{
+      'V':'Arrival89',
+      'CH':[7, 7],
+      'run': 21
+   },
    226:{
       'V':'Arrival133',
-      'CH':[11, 11]
+      'CH':[11, 11],
+      'run': 24
    },
    457:{
       'V':'Arrival133',
-      'CH':[22, 22]
+      'CH':[22, 22],
+      'run': 27
    },
    513:{
       'V':'Arrival111',
-      'CH':[11, 11]
+      'CH':[11, 11],
+      'run': 2,
+      'run': 26
    }
 }

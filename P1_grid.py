@@ -19,11 +19,11 @@ import random
 import os
 
 # Variables for grid search
-run = 130
+run = 132
 branch = 513
 # Chargers to use in the grid, in kW
-charger_power = [[11, 22], [7, 45]]  # [[11,11], [22,22], [7,22], [11,22]
-caps = [60]  # 40, 120, 100, 150 300 100 200
+charger_power = [[22,22], [7,22]]   # [11, 22] [[11,11]
+caps = [40, 60]  # 40, 120, 100, 150 300 100 200
 grid_file_path = os.path.join(gv.LOGS1,
                               r'grid_search{}.csv'.format(run))
 of.create_grid_file(grid_file_path)  # Creates a summary file
@@ -50,7 +50,7 @@ for charger in charger_power:
             'BAU': 10000,
             'BAU2': capacity
         }
-        notes = """Test new changes"""
+        notes = """Test with new start time"""
         profile_out, dates, bad_days, lpprob, status = lpf.optimise_range2(
             empty_profile,
             charger,

@@ -192,7 +192,7 @@ def charge_tonextday(profile, ca, charger1, charger2,
             prob += lpSum(  # Doesn't go over 100% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF
                     for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle] <= 0
+            ) + cumul_use + rel_charge[vehicle] <= 0.00001
             prob += lpSum(  # Doesn't go below 0% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF
                     for period, vehicle in cumul_profile.index]
@@ -324,7 +324,7 @@ def charge_tonextday_breach(profile, ca, charger1, charger2,
             profile.loc[(slice(None), vehicle), 'Battery_Use'].sum()
             + rel_charge[vehicle]  # Initial missing charge
             + battery_cap # Back to 0% charge
-            + next_req.loc[vehicle]
+            + next_req.loc[vehicle] - 0.00001
         )
 
     # Intermediate SOC constraints
@@ -338,14 +338,15 @@ def charge_tonextday_breach(profile, ca, charger1, charger2,
             prob += lpSum(  # Doesn't go over 100% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF
                     for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle] <= 0
+            ) + cumul_use + rel_charge[vehicle] <= 0.00001
             prob += lpSum(  # Doesn't go below 0% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF
                     for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle] >= (
-                -battery_cap + gv.TIME_FRACT
-                * (charger1 + ch_assignment[profile_av.loc[(period, vehicle),
-                                            'Session']]*(charger2-charger1)))
+            ) + cumul_use + rel_charge[vehicle] + battery_cap >= (
+                gv.TIME_FRACT
+                * (charger1 + ch_assignment[
+                    profile_av.loc[(period, vehicle),
+                    'Session']]*(charger2-charger1)))
 
     n = len(time_periods.unique())
     for period in time_periods:
@@ -391,6 +392,7 @@ def charge_tonextday_breach(profile, ca, charger1, charger2,
             ['from', 'Vehicle_ID'])
         df.set_index(['from', 'Vehicle_ID'], inplace=True)
         print('Cost:', value(prob.objective))
+        print(prob)
     return df, note, opt_level
 
 
@@ -628,7 +630,7 @@ def linear_optimiser_V4(profile, ca, charger1, charger2,
             prob += lpSum(  # Doesn't go over 100% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF
                     for period, vehicle in cumul_profile.index]
-            ) + cumul_use + rel_charge[vehicle] <= 0
+            ) + cumul_use + rel_charge[vehicle] <= 0.00001
             prob += lpSum(  # Doesn't go below 0% SOC
                 [outputs[period, vehicle] * gv.CHARGER_EFF
                     for period, vehicle in cumul_profile.index]
@@ -637,14 +639,13 @@ def linear_optimiser_V4(profile, ca, charger1, charger2,
                     charger1 + ch_assignment[profile_av.loc[(period, vehicle),
                                              'Session']]*(charger2-charger1)))
 
-    # Max capacity constraint
     n = len(time_periods.unique())
     for period in time_periods:
         time_veh = list(profile_av.loc[period].index)
-        prob += lpSum(
+        prob += lpSum(  # limits the overall site capacity
             [outputs[period, vehicle] for vehicle in time_veh]) <= (
                 capacity * gv.TIME_FRACT)
-        prob += lpSum(
+        prob += lpSum(  # limits the number of fast chargers
             [ch_assignment[profile_av.loc[(period, vehicle), 'Session']]
                 for vehicle in time_veh]) <= gv.NUM_FAST_CH
 

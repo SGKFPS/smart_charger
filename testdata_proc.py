@@ -60,7 +60,7 @@ def prep_data_JLP(path):
         parse_dates=['Start_Date_of_Route', 'Start_Time_of_Route',
                      'End_Time_of_Route'],
         dayfirst=True)
-    branches = journeys_all['Branch_ID'].unique()
+    branches = gv.STORE_SPEC.keys()
     journeys_all['date'] = pd.to_datetime(
         journeys_all['Start_Date_of_Route']).dt.date
     journeys_all['Start_Time_of_Route'] = (
