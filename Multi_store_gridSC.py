@@ -18,8 +18,8 @@ import time
 import random
 import os
 
-run = 27
-notes = 'Redid 457 with 3 bad routes removed'
+run = 51
+notes = 'Allocation 16'
 
 jour = pf.prep_data_JLP(gv.multi_journey_path)
 pickle.dump(jour, open('Outputs/LogsJLP/all_journeys', 'wb'))
@@ -32,10 +32,10 @@ print('Prices done')
 empty_profs = {}
 for branch in gv.STORE_SPEC.keys():
     journeys = jour[branch]
-    if branch == 457:
-        for route in [3049873, 3148304, 3148321]:
-            idx = journeys.loc[(slice(None), route), :].index
-            journeys.drop(index=idx, inplace=True)
+    # if branch == 457:
+    #     for route in [3049873, 3148304, 3148321]:
+    #         idx = journeys.loc[(slice(None), route), :].index
+    #         journeys.drop(index=idx, inplace=True)
     # journeys = pf.get_range_data(jour[branch], gv.DAY, gv.TIME_RANGE)
     empty_profs[branch] = pf.create_empty_schedule(
         journeys, price_data)
@@ -93,7 +93,8 @@ for branch in gv.STORE_SPEC.keys():
         bbox_inches = "tight")
     plt.close(range_fig)
 
-    heatplot = of.createHeatmap(site_profile)
+    heatplot = of.createHeatmap(site_profile,
+                                str(branch), [0, gv.STORE_SPEC[branch]['zMax']])
     heatplot.write_image(
         os.path.join(run_dir, 'heatplot{}.png'.format(run)),
         width=1800, height=1000)
@@ -117,7 +118,7 @@ for branch in gv.STORE_SPEC.keys():
     pickle.dump(status,
                 open(os.path.join(run_dir, 'status'), 'wb'))
     runtime = time.process_time() - script_strt
-    print('Range:', gv.TIME_RANGE, 'Runtime:',runtime)
+    print('Branch:', branch, 'Runtime:', runtime)
 
     of.write_grid_file(grid_file_path, run, branch, charger, 10000,
                        runtime, global_summary, notes)

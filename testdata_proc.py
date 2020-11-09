@@ -214,6 +214,7 @@ def clean_pricing(path):
                    inplace=True)
     return pricing
 
+
 def BAU_pricing(jour):
     """Creates a df of pricing data just for BAU
 
@@ -303,7 +304,7 @@ def create_empty_schedule(journeys, eprice):
             relevant_idx = (veh_profile[veh_profile['from']
                             >= start_journey].index)
             for idx in relevant_idx:
-                if ((veh_profile.loc[idx, 'from'] >= start_journey)
+                if ((veh_profile.loc[idx, 'from'] > start_journey)
                     & (veh_profile.loc[idx, 'from'] <
                         veh_journeys.loc[(route), 'End_Time_of_Route'])):
                     veh_profile.loc[idx, 'Available'] = 0

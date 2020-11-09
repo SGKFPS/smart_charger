@@ -350,11 +350,12 @@ def fig_scenario_count(df, x):
         color=gv.FPS_BLUE, fontweight='bold')
     return fig
 
-def createHeatmap(profile):
+def createHeatmap(profile, desc="", zrange=[0,100]):
     """Generate heatmaps for charging schedules
 
     Args:
         profile (DataFrame): Profile aggregated at site level
+        desc (str): description to include in tite
 
     Returns:
         fig: heatmap
@@ -379,11 +380,13 @@ def createHeatmap(profile):
         y=timeperiods,
         x=dates,
         hoverongaps=False,
-        colorbar=dict(title='EV charging (kW)')
+        colorbar=dict(title='EV charging (kW)'),
+        zmin=zrange[0], zmax=zrange[1]
         ))
 
     fig.update_layout(
         title="EV Charging schedule from"+str(dates[0])+" to "+str(dates[-1])
+        + '\n' + str(desc)
     )
     fig.show()
     return fig
