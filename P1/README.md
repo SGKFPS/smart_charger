@@ -2,8 +2,8 @@
 This tool was developed to optimise the charging of a fleet of electric
 vehicles according to various costs.
 
-The current Phase 2 focuses on charging at low priced period while
-maintining overall site below a global site capacity. This phase incorporates real-world ASC and site loads, as well as simultaneous optimisation over several days. There's also
+The current Phase 1 focuses on charging at low priced period while
+maintining overall site below a global site capacity. There's also
 functionality to charge to next day's requirements or to breach site
 capacity if absolutely necessary. The optimisation is done using **PuLP**,
 a linear programming package.

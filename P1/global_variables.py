@@ -4,20 +4,40 @@
 import datetime as dt
 import os
 
-NUM_FAST_CH = 40
+# NUM_VEHICLES = 10
+NUM_FAST_CH = 5
 TIME_INT = dt.timedelta(minutes=30)
-YEAR = 2021
+# START_DT = dt.datetime(2019, 3, 21, 0, 0, 0)
+# TIME_RANGE = dt.timedelta(weeks=30, days=4)
+# TIME_RANGE = dt.timedelta(weeks=0,days=4)
+# DAY = START_DT
+
 CHARGER_EFF = 0.9
 MARGIN_SOC = 0.1  # Required SOC will be 10% more than planned
-CATS = ['opt']  # 'opt' 'BAU', 'BAU2']
+CATS = ['BAU']  # 'opt' 'BAU', 'BAU2']
 CHAR_ST = dt.time(8, 0, 0)  # FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=8)
 DAY_INTERVALS = 48
 EPRICE = 14  # (p) Temp value #FIXME
 REF_CONS = 0.5
+
+# Select set of vans to use for prototyping or testing.
+VANS = {
+    'PROT': [
+        3, 4, 6, 11, 12, 14,
+        16, 20, 22, 23, 24, 25, 26,
+        29, 30, 31, 34, 35, 38, 39,
+        42, 43],
+    'TEST': [
+        44, 1, 2, 5, 7, 8, 9, 10,
+        13, 15, 17, 18, 19, 21, 27,
+        28, 32, 33, 36, 37, 40, 41
+        ]
+    }
+
+CATEGORY = 'PROT'
 TIME_FRACT = TIME_INT / dt.timedelta(hours=1)
-IS_LEEWAY = dt.timedelta(minutes=60)
-TURNAROUND = dt.timedelta(minutes=60)
+
 IMPORT_COLS = ['Route_ID', 'Branch_ID', 'Start_Time_of_Route',
                'End_Time_of_Route', 'Energy_Required', 'vannumber_ev_']
 
@@ -100,22 +120,15 @@ LABELS = {
  }
 
 # For grid_P1:
-# data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.csv"
-# pricing_path = r"Inputs/Octopus Agile Rates_2020_LON.csv"
+data_path = r"Inputs/JPL_allocation/Vivaro_513-22kW_2019/164_newstoreE*.csv"
+pricing_path = r"Inputs/Octopus Agile Rates_2019_LON.csv"
 # pricing_path = r'Inputs/20-06.JLP.current_forecast_tariff_2019.02.BF.csv'
-# LOGS1 = os.path.join('Outputs', 'Logs')
+LOGS1 = os.path.join('Outputs', 'Logs')
 
 # For Multi_store_gridSC
-# multi_journey_path = r'../Journey_analysis/JLP2/Outputs/Allocation_Scenarios/allocated_journeys_16.csv'
-# LOGS = os.path.join('Outputs', 'LogsJLP')
+multi_journey_path = r'../Journey_analysis/JLP2/Outputs/Allocation_Scenarios/allocated_journeys_14.csv'
+LOGS = os.path.join('Outputs', 'LogsJLP')
 
-# For mixed fleets
-LOGS2 = os.path.join('Outputs', 'LogsMixed')
-
-# For grid_JLP:
-JLP_pricing_path = r"Inputs/20-11.JLP.Time_Day_Rate_Workings.ST.01.xlsx"
-# xPMG = 0.72386  # Pontprennau
-xPMG = 0.66416  # Coulsdon
 VSPEC = {
     'Vivaro_LR':{
         'D':0.29,   # Quoted kWh/mile
@@ -125,71 +138,70 @@ VSPEC = {
         'color':'tab:green',
         'Ref':0.5
     },
-    'Arrival44': {
-        'D': 0.436/xPMG,   # Quoted kWh/mile 80%
-        # 'D':0.545,   # Quoted kWh/mile 100%
-        'C100': 44,      # Quoted pack capacity
-        'C': 35.2,         # 80% capacity
-        'P': 2225,    # Payload
-        'R': 80.8*xPMG,
-        'N': 'Arrival 44 kWh',
-        'color': 'tab:green',
-        'Ref': 0.5,
-        'df': 'df_44',
-        'price': 37435
+    'Arrival44':{
+        'D':0.436,   # Quoted kWh/mile 80% d.o.d
+        #'D':0.545,   # Quoted kWh/mile 100%
+        'C':44,     # Quoted pack capacity
+        'P':2225,    # Payload
+        'R':80.8,
+        'N':'Arrival 44kW',
+        'color':'tab:green',
+        'Ref':0.5,
+        'df':'df_44'
     },
-    'Arrival67': {
-        'D': 0.479/xPMG,   # Quoted kWh/mile 80%
-        # 'D': 0.599,   # Quoted kWh/mile 100%
-        'C100': 67,     # Quoted pack capacity
-        'C': 53.6,   # 80% capacity
-        'P': 2017,    # Payload
-        'R': 111.8*xPMG,
-        'N': 'Arrival 67 kWh',
-        'color': 'tab:orange',
-        'Ref': 0.5,
-        'df': 'df_67',
-        'price': 41389
+    'Arrival67':{
+        'D':0.479,   # Quoted kWh/mile 80%
+        #'D':0.599,   # Quoted kWh/mile 100%
+        'C':67,     # Quoted pack capacity
+        'P':2017,    # Payload
+        'R':111.8,
+        'N':'Arrival 67kW',
+        'color':'tab:orange',
+        'Ref':0.5,
+        'df':'df_67'
     },
-    'Arrival89': {
-        'D': 0.477/xPMG,   # Quoted kWh/mile 80%
-        # 'D': 0.597,   # Quoted kWh/mile 100%
-        'C100': 89,     # Quoted pack capacity
-        'C': 71.2,        # 80% capacity
-        'P': 1818,    # Payload
-        'R': 149*xPMG,
-        'N': 'Arrival 89 kWh',
-        'color': 'tab:red',
-        'Ref': 0.5,
-        'df': 'df89',
-        'price': 45170
+    'Arrival89':{
+        'D':0.477,   # Quoted kWh/mile 80%
+        #'D':0.597,   # Quoted kWh/mile 100%
+        'C':89,     # Quoted pack capacity
+        'P':1818,    # Payload
+        'R':149,
+        'N':'Arrival 89kW',
+        'color':'tab:red',
+        'Ref':0.5,
+        'df':'df89'
     },
-    'Arrival111': {
-        'D': 0.493/xPMG,   # Quoted kWh/mile 80%
-        # 'D': 0.616,   # Quoted kWh/mile 100%
-        'C100': 111,     # Quoted pack capacity
-        'C': 88.8,        # 80% capacity
-        'P': 1619,    # Payload
-        'R': 180*xPMG,
-        'N': 'Arrival 111 kWh',
-        'color': 'tab:purple',
-        'Ref': 0.5,
-        'df': 'df_111',
-        'price': 48952
+    'Arrival111':{
+        'D':0.493,   # Quoted kWh/mile 80%
+        #'D':0.616,   # Quoted kWh/mile 100%
+        'C':111,     # Quoted pack capacity
+        'P':1619,    # Payload
+        'R':180,
+        'N':'Arrival 111kW',
+        'color':'tab:purple',
+        'Ref':0.5,
+        'df':'df_111'
     },
-    'Arrival133': {
-        'D': 0.493/xPMG,   # Quoted kWh/mile 80%
-        # 'D': 0.630,   # Quoted kWh/mile 100%
-        'C100': 133,     # Quoted pack capacity
-        'C': 106.4,       # 80% capacity
-        'P': 1420,    # Payload
-        'R': 211*xPMG,
-        'N': 'Arrival 133 kWh',
-        'color': 'tab:olive',
-        'Ref': 0.5,
-        'df': 'df_133',
-        'price': 52733
+    'Arrival133':{
+        'D':0.504,   # Quoted kWh/mile 80%
+        #'D':0.630,   # Quoted kWh/mile 100%
+        'C':133,     # Quoted pack capacity
+        'P':1420,    # Payload
+        'R':211,
+        'N':'Arrival 130kW',
+        'color':'tab:olive',
+        'Ref':0.5,
+        'df':'df_133'
     },
+    'Sprinter':{
+        'D':0.149542468,   # Quoted l/mile
+        'C':2000,    # Very high mock value to remove constraint
+        'P':1235,    # Payload
+        'N':'Mercedes Sprinter PV',
+        'color':'tab:olive',
+        'price':36775,
+        'Ref':0.162
+    }
 }
 
 STORE_SPEC = {
@@ -218,19 +230,19 @@ STORE_SPEC = {
    #    'CH':[11, 11],
    #    'run': 24
    # },
-   # 457:{
-   #    # 'V':'Arrival133',
-   #    # 'CH':[22, 22],
-   #    # 'run':49,
-   #    'ASC':500,
-   #    'N':'Pontprennau',
-   #    'zMax':150
-   # },
+   457:{
+      'V':'Arrival133',
+      'CH':[22, 22],
+      'run':49,
+      'ASC':500,
+      'N':'Pontprennau',
+      'zMax':150
+   },
    513:{
-      # 'V':'Arrival111',
-      # 'CH':[11, 11],
+      'V':'Arrival111',
+      'CH':[11, 11],
       'run':50,
-      'ASC':900,
+      'ASC':1000,
       'N':'Coulsdon CFC',
       'zMax':700
    }

@@ -20,19 +20,18 @@ import os
 
 run = 51
 notes = 'Allocation 16'
-year = 2020
 
 jour = pf.prep_data_JLP(gv.multi_journey_path)
 pickle.dump(jour, open('Outputs/LogsJLP/all_journeys', 'wb'))
 print('All journeys done')
 
-price_data = pf.clean_pricing(gv.pricing_path)
+price_data = pf.BAU_pricing(jour)
 pickle.dump(price_data, open('Outputs/LogsJLP/price_data', 'wb'))
 print('Prices done')
 
 empty_profs = {}
 for branch in gv.STORE_SPEC.keys():
-    journeys = jour.loc[branch]
+    journeys = jour[branch]
     # if branch == 457:
     #     for route in [3049873, 3148304, 3148321]:
     #         idx = journeys.loc[(slice(None), route), :].index
@@ -58,13 +57,8 @@ for branch in gv.STORE_SPEC.keys():
     script_strt = time.process_time()
     run_dir = os.path.join(gv.LOGS, 'run{}'.format(run))
     os.makedirs(os.path.join(run_dir,'daily'))
-    capacity = pf.clean_site_capacityJLP(
-        branch, year, 'Inputs/{}_meter_{}.csv'.format(branch, year))
-    print('Capacity done for {}'.format(branch))
     site_capacity = {
-        'opt': capacity['Available_kW'],
-        'BAU': capacity['Available_nolim']
-    }
+        'BAU': 10000}
     charger = gv.STORE_SPEC[branch]['CH']
     print('Run:', run,'/ Branch:', branch,
           '/ Charger:', charger, '/ Capacity:', 'All')
@@ -76,7 +70,7 @@ for branch in gv.STORE_SPEC.keys():
 
     range_profile, site_profile, days_summary, global_summary = (
         of.summary_outputs(profile_out,
-                           jour.loc[branch], capacity['Available_kW'], status, veh))
+                           jour[branch], 10000, status, veh))
     ################ OUTPUTS ####################
     # Make and save daily figures
     for date in dates:

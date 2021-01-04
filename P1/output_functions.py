@@ -14,22 +14,22 @@ import plotly.io as pio
 import os
 
 
-def summary_outputs(profile, journeys, cap, status, dictV):
+def summary_outputs(profile, journeys, cap, status, veh='Vivaro_LR'):
     """Creates summary columns and dataframes from outputs
 
     Args:
         profile (DataFrame): output/SOC per time period, per vehicle
         journeys (DataFrame): all the journey information for all routes
-        cap (Series): max allowed site capacity per time period
+        cap (float): max. site capacity
         status (DataFrame): level of optimisation for each day
-        dictV (dict): dictionary of vehicle IDs and model
+        veh (DataFrame): vehicle in use
 
     Returns:
         DataFrames: dfs corresponding to overall profile, site
             site aggregation, day summary and global summary.
     """
     cols = gv.CAT_COLS
-    battery_cap = {k: gv.VSPEC[dictV[k]]['C'] for k in dictV.keys()}
+    battery_cap = gv.VSPEC[veh]['C']
     vehicles = profile.index.get_level_values(1).unique()
     range_profile = profile.fillna(0)
     for ca in gv.CATS:
@@ -41,26 +41,25 @@ def summary_outputs(profile, journeys, cap, status, dictV):
             * range_profile[cols['PRICE']['opt']])
         for vehicle in vehicles:
             range_profile.loc[(slice(None), vehicle), cols['SOC'][ca]] = (
-                battery_cap[vehicle]
+                battery_cap
                 + range_profile.loc[
                     (slice(None), vehicle), cols['CHARGE_DEL'][ca]].cumsum()
                 + range_profile.loc[
                     (slice(None), vehicle), 'Battery_Use'].cumsum()
-                )*100/battery_cap[vehicle]
+                )*100/battery_cap
 
     # Sum all vehicles, per time period
     site = range_profile.groupby(level=0).sum()
     site[cols['PRICE']['opt']] = range_profile[
         cols['PRICE']['opt']].groupby(level=0).mean()
     site.drop(columns=[cols['PRICE']['BAU']], inplace=True)
-    site = site.merge(cap, left_index=True, right_index=True)
     for ca in gv.CATS:
         site[cols['SOC'][ca]] = range_profile[cols['SOC'][ca]].groupby(
             level=0).mean()
         site[cols['NUM'][ca]] = range_profile[cols['OUTPUT'][ca]].astype(
             bool).groupby(level=0).sum()
         site[cols['BREACH'][ca]] = site[cols['OUTPUT'][ca]] > (
-            site['Available_kW'] * gv.TIME_FRACT+0.01)
+            cap * gv.TIME_FRACT+0.01)
 
     # Daily summaries
     site['date'] = site.index.date - (
@@ -315,7 +314,6 @@ def create_daily_summary(summary, day):
     day_profile.sort_index(inplace=True)
     return day_profile
 
-
 def fig_scenario_count(df, x):
     """Creates a figure for feasible/unfeasible distribution
 
@@ -351,7 +349,6 @@ def fig_scenario_count(df, x):
         'Distribution of scenarios for each combination of chargers',
         color=gv.FPS_BLUE, fontweight='bold')
     return fig
-
 
 def createHeatmap(profile, desc="", zrange=[0,100]):
     """Generate heatmaps for charging schedules
@@ -394,7 +391,6 @@ def createHeatmap(profile, desc="", zrange=[0,100]):
     fig.show()
     return fig
 
-
 def create_grid_file(path):
     """Creates a csv file with correct headers
 
@@ -411,13 +407,13 @@ def create_grid_file(path):
         grid_file.write(str(gv.CAT_COLS['ECOST'][ca] + ','))
         grid_file.write(str(gv.CAT_COLS['BREACH'][ca] + ','))
     grid_file.write('Main,Tonext,Breach,Magic,Empty')
-    grid_file.write(',Notes,Optimisation,SmallPack,LargePack,nSmall,nLarge,nFast')
+    grid_file.write(',Notes')
     grid_file.close()
     return
 
 
 def write_grid_file(path, run, branch, charger, cap,
-                    runtime, global_summary, notes, veh, numV):
+                    runtime, global_summary, notes):
     """Write settings and results to the grid file
 
     Args:
@@ -425,7 +421,7 @@ def write_grid_file(path, run, branch, charger, cap,
     """
     grid_file = open(path, 'a')
     grid_file.write('\n' + str(run) + ',' + str(branch) + ','
-                    + str(charger[0]) + ',' + str(charger[-1])  + ','
+                    + str(charger[0]) + ',' + str(charger[1])  + ','
                     + str(cap) + ',')
     grid_file.write(str(runtime) + ',')
     grid_file.write(str(global_summary['Battery_Use']) + ',')
@@ -444,28 +440,23 @@ def write_grid_file(path, run, branch, charger, cap,
             grid_file.write(str(global_summary[l]) + ',')
         else:
             grid_file.write('0,')
-    grid_file.write(notes + ',' + ca + ',')
-    grid_file.write(str(veh[0]) + ',' + str(veh[-1]) + ',')
-    grid_file.write(str(numV[0]) + ',' + str(numV[-1]) + ',')
-    grid_file.write(str(gv.NUM_FAST_CH) + ',')
+    grid_file.write(notes)
     grid_file.close()
     return
 
-
 def create_settings_file(run, run_dir, notes, charger, cap, branch,
-                         global_summary, bad_days, dictV):
+                         global_summary, bad_days):
     """Create a list of settings
 
     Args:
         run (int): id. for this script run
         run_dir (str): file path for this run's folder
         notes (str): Any notes generated in the script
-        charger (list): list of charger powers (usually 2)
+        charger (int): list of charger powers (usually 2)
         cap (int): site capacity
         branch (int): branch ID
         global_summary (Series): generated from summary_outputs
         bad_days (str): list of all 'unusual' days and their descript.
-        dictV (dict): dictionary of vehicle IDs and model
     """
     with open('global_variables.py','r') as f:
         global_variables = f.read()
@@ -475,7 +466,6 @@ def create_settings_file(run, run_dir, notes, charger, cap, branch,
         fi.write(notes)
         fi.write('\n' + str(run) + ',' + str(charger) + ',' + str(cap)
                  + str(branch) + '\n')
-        fi.write(str(dictV) + '\n')
         fi.write(global_summary.to_string())
         fi.write(bad_days)
         fi.write('\n \n global_variables.py:\n')

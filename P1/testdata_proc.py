@@ -13,7 +13,7 @@ import random
 import time
 
 
-def prep_data_limit(path, category):
+def prep_data(path, category):
     """Preprocess journey data
 
     Formats datetimes, selects vans, gets next departure/previous arrival
@@ -47,9 +47,7 @@ def prep_data_limit(path, category):
 def prep_data_JLP(path):
     """Preprocess journey data from JLP stores
 
-    Formats datetimes, gets next departure/previous arrival. Journeys
-    must be already allocated and individual journeys under battery
-    cap.
+    Formats datetimes, gets next departure/previous arrival
 
     Args:
         path (str): filepath of journey data
@@ -89,83 +87,28 @@ def prep_data_JLP(path):
             jour[branch]['Planned_total_Mileage']
             *gv.VSPEC[gv.STORE_SPEC[branch]['V']]['D']
             +jour[branch]['Route_Time']*gv.REF_CONS)
-    journeys = pd.concat(jour)
-    return journeys
+    return jour
 
 
-def prep_data_mixed(path, vs, ch, dates, vNum):
-    """Preprocess journey data from JLP stores with a mixed fleet
-
-    Formats datetimes, gets next departure/previous arrival. Journeys
-    must be already allocated and individual journeys under battery
-    cap.
+def limit_vehicles_multishift(journeys, category):
+    """Selects only a subset of vans to use
 
     Args:
-        path (str): filepath of journey data
+        journeys (DataFrame): table of all journeys for all vans
+        category (str): 'PROT' or 'TEST'
 
     Returns:
-        DataFrame: table of all journeys
+        DataFrame: only journeys made by the subset of vans
     """
-    journeys = pickle.load(open(path, 'rb'))
-    journeys['date'] = pd.to_datetime(
-        journeys['Start_Date_of_Route']).dt.date
-    journeys['Start_Time_of_Route'] = (
-        journeys['Start_Time_of_Route'] - dt.datetime(1900,1,1))
-    journeys['Start_Time_of_Route'] = (
-        journeys['Start_Time_of_Route']
-        + journeys['Start_Date_of_Route'])
-    journeys['End_Time_of_Route'] = (
-        journeys['End_Time_of_Route'] - dt.datetime(1900,1,1))
-    journeys['End_Time_of_Route'] = (
-        journeys['End_Time_of_Route']
-        + journeys['Start_Date_of_Route'])
-    # journeys['Route_Time'] = (
-    #     journeys['End_Time_of_Route']
-    #     - journeys['Start_Time_of_Route']).dt.total_seconds()/3600
-    journeys['Route_Time'] = 0
-    journeys = journeys[journeys['Start_Date_of_Route'].isin(dates)]
-    vJourneys = (journeys.groupby(['Start_Date_of_Route', 'Vehicle_ID'])
-                    .agg({'Start_Time_of_Route': 'min',
-                        'End_Time_of_Route': 'max',
-                        'EqMileage': 'sum',
-                        'Shift': 'count',
-                        'Route_Cost': 'max',
-                        'Loaded_Kgs': 'max'}))
-    vJourneys['Van'] = vs[-1]
-    vJourneys.loc[vJourneys['Route_Cost'] > 0.5, 'Van'] = vs[0]
-    vJourneys.loc[
-        (vJourneys['Route_Cost'] == 0)
-        & (vJourneys['EqMileage'] <= gv.VSPEC[vs[0]]['R']), 'Van'] = vs[0]
-    # dates = vJourneys.index.get_level_values('Start_Date_of_Route').unique()
-    for date in dates:
-        dayJ = vJourneys.loc[date]
-        move = max(len(dayJ[dayJ['Van'] == vs[0]]) - vNum[0], 0)
-        newLarge = dayJ[dayJ['Van'] == vs[0]].sort_values(
-            by='EqMileage', ascending=False).index[:move]
-        vJourneys.loc[(date, newLarge), 'Van'] = vs[-1]
-        dayJ = vJourneys.loc[date]
-        slowidx = dayJ[dayJ['Van'] == vs[0]].index
-        fastidx = dayJ[dayJ['Van'] == vs[-1]].index
-        vJourneys.loc[(date, slowidx), 'NewVehicleID'] = range(1, len(slowidx)+1)
-        vJourneys.loc[(date, fastidx), 'NewVehicleID'] = range(
-            vNum[0]+1, vNum[0]+len(fastidx)+1)
-    journeys = journeys.merge(vJourneys[['Van', 'NewVehicleID']],
-                    left_on=['Start_Date_of_Route', 'Vehicle_ID'],
-                    right_index=True)
-    journeys = get_prev_arrival(journeys)
-    journeys['Old_VID'] = journeys['Vehicle_ID']
-    journeys['Vehicle_ID'] = journeys['NewVehicleID']
-    journeys.sort_values(by=['date', 'Route_ID'], inplace=True)
-    journeys.reset_index(inplace=True)
-    journeys.set_index(['date', 'Route_ID'], inplace=True)
-    journeys['Energy_Required'] = (
-        journeys['Planned_total_Mileage']
-        * journeys['Van'].map(gv.VSPEC).apply(pd.Series)['D']
-        + journeys['Route_Time'] * gv.REF_CONS)
-    journeys.drop(columns=['NewVehicleID', 'Req_Energy'], inplace=True)
-    dictV = {i: vs[0] for i in range(1, vNum[0]+1)}
-    dictV.update({i: vs[-1] for i in range(vNum[0] + 1, vNum[0] + vNum[-1]+1)})
-    return journeys, dictV
+    list_days = list(journeys.date.unique())
+    vans = gv.VANS[gv.CATEGORY][:gv.NUM_VEHICLES]
+    journey_list = []
+    for day in list_days:
+        daily_journeys = journeys[journeys['date'] == day]
+        select_journeys = daily_journeys[
+            daily_journeys['Vehicle_ID'].isin(vans)]
+        journey_list.append(select_journeys)
+    return pd.concat(journey_list)
 
 
 def get_prev_arrival(journeys):
@@ -299,33 +242,6 @@ def BAU_pricing(jour):
     return df
 
 
-def clean_JLpricing(path, dates):
-    """Creates df with electricity and time price based on JL tariff
-
-    This produces a list of electricity prices for each time period.
-    It also creates a fake increasing 'time price' to use for benchmarking.
-    Args:
-        path (str): filepath of electricity price
-
-    Returns:
-        DataFrame: [description]
-    """
-    minD = dates.min()
-    nDays = (dates.max() - minD).days + 2
-    pDates = [minD + i*dt.timedelta(days=1) for i in range(nDays)]
-    pricing = pd.read_excel(gv.JLP_pricing_path, sheet_name='Rate Backing',
-                            header=2, usecols="L,AA", names=['Time', 'Price'])
-    pricing['Time'] = pd.to_timedelta(pricing['Time'].astype(str))
-    df = pd.DataFrame({
-        'Date': np.repeat(pDates, 48),
-        'Time': np.tile(pricing['Time'], len(pDates)),
-        'Electricity_Price': np.tile(pricing['Price']*100, len(pDates))})
-    df['from'] = df['Date'] + df['Time']
-    df['Time_Price'] = list(range(len(df)))
-    df['Time_Price'] = df['Time_Price']/1000
-    return df
-
-
 def create_range_times(time_range, eprice):
     """Creates the timeline for a given range with the price information
 
@@ -363,14 +279,16 @@ def create_empty_schedule(journeys, eprice):
     start_date = min(journeys.index.get_level_values('date')).to_pydatetime()
     start_range = dt.datetime.combine(start_date.date(), gv.CHAR_ST)
     end_date = max(journeys.index.get_level_values('date')).to_pydatetime()
-    end_range = dt.datetime.combine(end_date.date(), gv.CHAR_ST) + dt.timedelta(days=1)
+    end_range = dt.datetime.combine(end_date.date(), gv.CHAR_ST)
     time_range = [start_range, end_range]
     num_days = (end_date.date() - start_date.date()).days
     # days_profile = {}
     vehicles = journeys['Vehicle_ID'].unique()
     veh_profiles_list = []
     for vehicle in vehicles:
-        veh_profile = create_range_times(time_range, eprice)
+        veh_profile = create_range_times(
+            time_range,
+            eprice)
         veh_profile['Vehicle_ID'] = vehicle
         veh_profile['Available'] = 1
         veh_profile['Battery_Use'] = 0
@@ -379,13 +297,23 @@ def create_empty_schedule(journeys, eprice):
             'date')
         veh_journeys = veh_journeys.sort_values(by='Start_Time_of_Route')
 
+        # Assign 0 to availability when vehicle is out
         for route in veh_journeys.index:
-            # Assign 0 to availability when vehicle is out
-            idx_unav, idx_return = tp_journeys(veh_profile, veh_journeys, route)
-            veh_profile.loc[idx_unav, 'Available'] = 0
-            # Assign energy used when vehicle returns
-            veh_profile.loc[idx_return, 'Battery_Use'] = -veh_journeys.loc[
-                        route, 'Energy_Required']
+            start_journey = (veh_journeys.loc[route, 'Start_Time_of_Route']
+                             - gv.TIME_INT)
+            relevant_idx = (veh_profile[veh_profile['from']
+                            >= start_journey].index)
+            for idx in relevant_idx:
+                if ((veh_profile.loc[idx, 'from'] > start_journey)
+                    & (veh_profile.loc[idx, 'from'] <
+                        veh_journeys.loc[(route), 'End_Time_of_Route'])):
+                    veh_profile.loc[idx, 'Available'] = 0
+                if (veh_profile.loc[idx, 'from']
+                    > veh_journeys.loc[(route), 'End_Time_of_Route']
+                        - gv.TIME_INT):
+                    veh_profile.loc[idx, 'Battery_Use'] = -veh_journeys.loc[
+                        (route), 'Energy_Required']
+                    break
         veh_profiles_list.append(veh_profile)
     profiles = pd.concat(veh_profiles_list)
     profiles.sort_values(by=['from', 'Vehicle_ID'], inplace=True)
@@ -420,35 +348,6 @@ def create_daily_schedule(profile, day):
     return day_profile.sort_index()
 
 
-def clean_site_capacityJLP(br, year, path):
-    """Creates a df of available capacity for each time period
-
-    Args:
-        br (int): branch ID
-        year (int): year
-        path (str): relative or absolute path of meter data
-
-    Returns
-        df: for each tp, other site load and available site capacity
-    """
-    meter = pd.read_csv(path, usecols=['DateTime', 'kWh'],
-                        parse_dates=['DateTime'], dayfirst=True)
-    meter['Available_kW'] = gv.STORE_SPEC[br]['ASC'] - meter['kWh']*2
-    meter['Available_nolim'] = 20000
-    meter.set_index('DateTime', inplace=True)
-    return meter
-
-
-def tp_journeys(profile, journeys, route):
-    after_departure = profile['from'] > (
-        journeys.loc[route, 'Start_Time_of_Route'] - gv.TIME_INT)
-    before_end = profile['from'] < (
-        journeys.loc[route, 'End_Time_of_Route'] + gv.IS_LEEWAY)
-    before_return = profile['from'] < journeys.loc[route, 'End_Time_of_Route']
-    return_idx = profile[before_return]['from'].idxmax()
-    return after_departure & before_end, return_idx
-
-
 if __name__ == "__main__":
     all_journeys = prep_data(gv.data_path, gv.CATEGORY)
     print('All journeys done')
@@ -464,5 +363,5 @@ if __name__ == "__main__":
     # # Pickle
     pickle.dump(all_journeys, open('Outputs/all_journeys', 'wb'))
     pickle.dump(journeys_range, open('Outputs/journeys_range', 'wb'))
-    pickle.dump(price_data, open('Outputs/price_data{}'.format(gv.YEAR), 'wb'))
+    pickle.dump(price_data, open('Outputs/price_data', 'wb'))
     pickle.dump(empty_profile, open('Outputs/empty_profile', 'wb'))
