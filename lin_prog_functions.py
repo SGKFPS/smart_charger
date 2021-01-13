@@ -39,7 +39,7 @@ def optimise_range3(empty_profile, charger, capacity,
     all_days_profile = []
     dates_status = pd.DataFrame(columns=gv.CATS)
     bad_days = '\nBad days:\n'
-    status = 0
+    # status = 0
     initial_rel_charge = pd.Series(
         data=[0]*nVeh,
         index=empty_profile.index.get_level_values(1).unique()
@@ -198,14 +198,14 @@ def charge_tonextday(profile, ca, charger1, charger2,
                     for period, vehicle in cumul_profile.index]
             ) + cumul_use + rel_charge[vehicle] <= 0.00001
         # Make sure it doesn't go below 0% SOC at every return
-        profile_ret = profile[profile['Return']==1]
+        profile_ret = profile[profile['Return'] == 1]
         if vehicle in profile_ret.index.get_level_values('Vehicle_ID'):
             returns = profile_ret.loc[(slice(None), vehicle), 'Battery_Use']
             for period in returns.index.get_level_values(0):
                 cumul_use = profile.loc[(slice(period), vehicle),
                                         'Battery_Use'].sum()
-                cumul_profile = profile_av.loc[(slice(period), vehicle),
-                                            'Battery_Use']
+                cumul_profile = profile_av.loc[
+                    (slice(period), vehicle), 'Battery_Use']
                 prob += lpSum(  # Doesn't go below 0% SOC
                     [outputs[period, v] * gv.CHARGER_EFF
                         for period, v in cumul_profile.index]
@@ -338,7 +338,7 @@ def charge_tonextday_breach(profile, ca, charger1, charger2,
         ) >= - (
             profile.loc[(slice(None), vehicle), 'Battery_Use'].sum()
             + rel_charge[vehicle]  # Initial missing charge
-            + battery_cap[vehicle] # Back to 0% charge
+            + battery_cap[vehicle]  # Back to 0% charge
             + next_req.loc[vehicle] - 0.00001
         )
 
@@ -355,14 +355,14 @@ def charge_tonextday_breach(profile, ca, charger1, charger2,
                     for period, vehicle in cumul_profile.index]
             ) + cumul_use + rel_charge[vehicle] <= 0.00001
         # Make sure it doesn't go below 0% SOC at every return
-        profile_ret = profile[profile['Return']==1]
+        profile_ret = profile[profile['Return'] == 1]
         if vehicle in profile_ret.index.get_level_values('Vehicle_ID'):
             returns = profile_ret.loc[(slice(None), vehicle), 'Battery_Use']
             for period in returns.index.get_level_values(0):
                 cumul_use = profile.loc[(slice(period), vehicle),
                                         'Battery_Use'].sum()
-                cumul_profile = profile_av.loc[(slice(period), vehicle),
-                                            'Battery_Use']
+                cumul_profile = profile_av.loc[
+                    (slice(period), vehicle), 'Battery_Use']
                 prob += lpSum(  # Doesn't go below 0% SOC
                     [outputs[period, v] * gv.CHARGER_EFF
                         for period, v in cumul_profile.index]
@@ -654,15 +654,15 @@ def linear_optimiser_V6(profile, ca, charger1, charger2,
                     for period, vehicle in cumul_profile.index]
             ) + cumul_use + rel_charge[vehicle] <= 0.00001
         # Make sure it doesn't go below 0% SOC at every return
-        profile_ret = profile[profile['Return']==1]
+        profile_ret = profile[profile['Return'] == 1]
         if vehicle in profile_ret.index.get_level_values('Vehicle_ID'):
             returns = profile_ret.loc[(slice(None), vehicle),
                                       'Battery_Use']
             for period in returns.index.get_level_values(0):
                 cumul_use = profile.loc[(slice(period), vehicle),
                                         'Battery_Use'].sum()
-                cumul_profile = profile_av.loc[(slice(period), vehicle),
-                                            'Battery_Use']
+                cumul_profile = profile_av.loc[
+                    (slice(period), vehicle), 'Battery_Use']
                 prob += lpSum(  # Doesn't go below 0% SOC
                     [outputs[period, v] * gv.CHARGER_EFF
                         for period, v in cumul_profile.index]

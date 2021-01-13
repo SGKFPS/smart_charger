@@ -197,10 +197,8 @@ def daily_summary_plot(summary):
     # labels and legends
     axs[0].set_ylabel('E. Demand (kW)', color=gv.FPS_BLUE, fontweight='bold')
     axs[1].set_ylabel('E. Costs (GBP)', color=gv.FPS_BLUE, fontweight='bold')
-    #axs[2].set_ylabel('Savings (%)', color=gv.FPS_BLUE, fontweight='bold')
     axs[1].set_xlabel('Time', color=gv.FPS_BLUE, fontweight='bold')
     axs[1].legend(frameon=False)
-    # axs[2].legend(frameon=False)
 
     for ax in fig.get_axes():
         ax.xaxis.set_major_locator(plt.MaxNLocator(12))
@@ -332,9 +330,9 @@ def fig_scenario_count(df, x):
     caps = df.index.get_level_values('cap').unique()
     fig, axs = plt.subplots(
         5,
-        figsize=(6,6),
+        figsize=(6, 6),
         sharex=True,
-        gridspec_kw={'hspace':0.1})
+        gridspec_kw={'hspace': 0.1})
     for i in range(5):
         axs[i].bar(
             x, df.loc[caps[i]]['Feasible'],
@@ -353,7 +351,7 @@ def fig_scenario_count(df, x):
     return fig
 
 
-def createHeatmap(profile, desc="", zrange=[0,100]):
+def createHeatmap(profile, desc="", zrange=[0, 100]):
     """Generate heatmaps for charging schedules
 
     Args:
@@ -425,7 +423,7 @@ def write_grid_file(path, run, branch, charger, cap,
     """
     grid_file = open(path, 'a')
     grid_file.write('\n' + str(run) + ',' + str(branch) + ','
-                    + str(charger[0]) + ',' + str(charger[-1])  + ','
+                    + str(charger[0]) + ',' + str(charger[-1]) + ','
                     + str(cap) + ',')
     grid_file.write(str(runtime) + ',')
     grid_file.write(str(global_summary['Battery_Use']) + ',')
@@ -439,9 +437,9 @@ def write_grid_file(path, run, branch, charger, cap,
             str(global_summary[gv.CAT_COLS['ECOST'][ca]]) + ',')
         grid_file.write(
             str(global_summary[gv.CAT_COLS['BREACH'][ca]]) + ',')
-    for l in gv.LEVELS:
-        if l in global_summary.index:
-            grid_file.write(str(global_summary[l]) + ',')
+    for lev in gv.LEVELS:
+        if lev in global_summary.index:
+            grid_file.write(str(global_summary[lev]) + ',')
         else:
             grid_file.write('0,')
     grid_file.write(notes + ',' + ca + ',')
@@ -467,11 +465,11 @@ def create_settings_file(run, run_dir, notes, charger, cap, branch,
         bad_days (str): list of all 'unusual' days and their descript.
         dictV (dict): dictionary of vehicle IDs and model
     """
-    with open('global_variables.py','r') as f:
+    with open('global_variables.py', 'r') as f:
         global_variables = f.read()
 
     with open(os.path.join(
-        run_dir, 'variables{}.csv'.format(run)),'a') as fi:
+            run_dir, 'variables{}.csv'.format(run)), 'a') as fi:
         fi.write(notes)
         fi.write('\n' + str(run) + ',' + str(charger) + ',' + str(cap)
                  + str(branch) + '\n')

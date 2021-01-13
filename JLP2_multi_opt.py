@@ -1,3 +1,7 @@
+# Smart Charging in a single store with multiple packs/chargers
+# Modeled as a PuLP optimisation blending + scheduling problem
+# Author: Sofia Taylor, Flexible Power Systems
+
 import numpy as np
 import pandas as pd
 import datetime as dt
@@ -11,54 +15,51 @@ import matplotlib.pyplot as plt
 import time
 import os
 
-branch = 513
-
-vTypes = [['Arrival111', 'Arrival111']]
-# vNum = [[0, 116]]
-chargers = [[11, 22]]
-# # vTypes = [['Arrival111', 'Arrival111'],
-# #           ['Arrival67', 'Arrival111'], ['Arrival44', 'Arrival111']]
-vNum = [[0, 116]]
-
-
-run = 93
+# These need changing every time
+branch = 457
+vTypes = [['Arrival133', 'Arrival133']]
+vNum = [[0, 16]]
+chargers = [[22]]
+run = 94
 notes = 'Creating profiles for MO deck'
 year = 2021
 
 # Get site capacity
+site_capacity_path = os.path.join(
+    gv.INPUTS, '{}_meter_{}.csv'.format(branch, year))
 capacity = pf.clean_site_capacityJLP(
-    branch, year, 'Inputs/{}_meter_{}.csv'.format(branch, year))
-print('Capacity done for {}'.format(branch))
+    branch, year, site_capacity_path)
+print('Capacity done')
 
-# Get list of dates
-t = "{}{}{}".format(branch, vTypes[0], '[22]')  # chargers[0]########################################################
-# journeys = pickle.load(open(
-#     "C:/Users/SofiaTaylor/OneDrive - Flexible Power Systems Ltd/"
-#     "dev/Journey_analysis/JLP2/Outputs/MultiOptimisation/{}_synth2021/"
-#     "20-12.WEVC.Multi_Baseline457['Arrival133'][60].pkl".format(branch), 'rb'))
-journeys = pickle.load(open(
-    "C:/Users/SofiaTaylor/OneDrive - Flexible Power Systems Ltd/"
-    "dev/Journey_analysis/JLP2/Outputs/MultiOptimisation/{}_synth2021/"
-    "20-12.WEVC.Multi_Optimisation{}.pkl".format(branch, t), 'rb'))
-alldates = pd.to_datetime(journeys['Start_Date_of_Route'].unique().astype(str))[50:55]
-price = pf.clean_JLpricing(gv.JLP_pricing_path, alldates)
+# Get list of dates from a set of journeys
+t = "{}{}{}".format(branch, vTypes[0], chargers[0])
+journeys = pickle.load(open(os.path.join(
+    gv.JOURNEYS,
+    "20-12.WEVC.Multi_Optimisation{}.pkl".format(t)), 'rb'))
+alldates = pd.to_datetime(
+    journeys['Start_Date_of_Route'].unique().astype(str))[50:55]
+
+# Get a price table
+pricing_path = os.path.join(
+    gv.INPUTS,
+    "20-11.JLP.Time_Day_Rate_Workings.ST.01.xlsx")
+price = pf.clean_JLpricing(pricing_path, alldates)
+
 
 # Initialise grid search file
-grid_file_path = os.path.join(gv.LOGS2,
+grid_file_path = os.path.join(gv.LOGS,
                               r'JLPmixed{}.csv'.format(run))
 of.create_grid_file(grid_file_path)
 
 for ch in chargers:
     for i, vs in enumerate(vTypes):
         script_strt = time.process_time()
-        run_dir = os.path.join(gv.LOGS2, 'run{}'.format(run))
-        os.makedirs(os.path.join(run_dir,'daily'))
-        t = "{}{}{}".format(branch, vs, '[22]')  # ch ###################################################################
+        run_dir = os.path.join(gv.LOGS, 'run{}'.format(run))
+        os.makedirs(os.path.join(run_dir, 'daily'))
+        t = "{}{}{}".format(branch, vs, ch)
         N = sum(vNum[i])
-        jpath = (
-            "C:/Users/SofiaTaylor/OneDrive - Flexible Power Systems Ltd/"
-            "dev/Journey_analysis/JLP2/Outputs/MultiOptimisation/{}_synth2021/"
-            "20-12.WEVC.Multi_Optimisation{}.pkl".format(branch, t))
+        jpath = os.path.join(gv.JOURNEYS,
+                             "20-12.WEVC.Multi_Optimisation{}.pkl".format(t))
         print(t, N, 'vehicles')
         journeys, vDict = pf.prep_data_mixed(jpath, vs, ch, alldates, vNum[i])
         pickle.dump(journeys,
@@ -66,8 +67,8 @@ for ch in chargers:
         empty_profs = pf.create_empty_schedule(journeys, price)
         # empty_profs = pickle.load(open(
         #     "Outputs/LogsMixed/empty_profs{}.pkl".format(t), 'rb'))
-        pickle.dump(empty_profs,
-                    open(os.path.join(run_dir, 'empty_profs{}.pkl'.format(t)), 'wb'))
+        pickle.dump(empty_profs, open(
+            os.path.join(run_dir, 'empty_profs{}.pkl'.format(t)), 'wb'))
         print('Profiles done for {}'.format(branch))
         site_capacity = {
             'opt': capacity['Available_kW'],
@@ -76,29 +77,15 @@ for ch in chargers:
         profile_out, dates, bad_days, lpprob, status = (
             lpf.optimise_range3(empty_profs,
                                 ch, site_capacity, vDict))
+        # OUTPUTS
         range_profile, site_profile, days_summary, global_summary = (
             of.summary_outputs(profile_out, journeys,
                                capacity['Available_kW'], status, vDict))
-        ################ OUTPUTS ####################
-        # Make and save daily figures
-        # for date in dates:
-        #     day = dt.datetime.combine(date, dt.datetime.min.time())
-        #     day_profile = of.create_daily_summary(site_profile, day)
-        #     fig_summary = of.summary_plot(day_profile)
-        #     fig_summary.savefig(os.path.join(
-        #         run_dir, 'daily', 'fig{}.jpg'.format(date)))
-        #     plt.close(fig_summary)
-        #Scatter plot
-        fig_scatter_outputs = of.scatter_plot(site_profile)
-        fig_scatter_outputs.savefig(os.path.join(
-            run_dir, 'opt_scatter{}.jpg'.format(run)),
-            bbox_inches = "tight")
-        plt.close(fig_scatter_outputs)
-
+        # Figures
         range_fig = of.daily_summary_plot(days_summary.fillna(0))
         range_fig.savefig(os.path.join(
             run_dir, 'fig_range{}.svg'.format(run)),
-            bbox_inches = "tight")
+            bbox_inches="tight")
         plt.close(range_fig)
 
         heatplot = of.createHeatmap(
@@ -109,9 +96,21 @@ for ch in chargers:
         heatplot.write_html(
             os.path.join(run_dir, "heatplot{}.html".format(run)))
 
-        # Write problem to an .lp file
-        lpprob[gv.CATS[0]].writeLP(os.path.join(
-            run_dir, "multi_vehicle.lp"))
+        # Daily figures
+        # for date in dates:
+        #     day = dt.datetime.combine(date, dt.datetime.min.time())
+        #     day_profile = of.create_daily_summary(site_profile, day)
+        #     fig_summary = of.summary_plot(day_profile)
+        #     fig_summary.savefig(os.path.join(
+        #         run_dir, 'daily', 'fig{}.jpg'.format(date)))
+        #     plt.close(fig_summary)
+
+        # #Scatter plot
+        # fig_scatter_outputs = of.scatter_plot(site_profile)
+        # fig_scatter_outputs.savefig(os.path.join(
+        #     run_dir, 'opt_scatter{}.jpg'.format(run)),
+        #     bbox_inches = "tight")
+        # plt.close(fig_scatter_outputs)
 
         # Create a file with notes, settings and results
         of.create_settings_file(run, run_dir, notes, ch, 10000,
@@ -123,8 +122,6 @@ for ch in chargers:
                     open(os.path.join(run_dir, 'site_summary'), 'wb'))
         pickle.dump(days_summary,
                     open(os.path.join(run_dir, 'days_summary'), 'wb'))
-        pickle.dump(status,
-                    open(os.path.join(run_dir, 'status'), 'wb'))
         runtime = time.process_time() - script_strt
         print('Branch:', branch, 'Runtime:', runtime)
 
