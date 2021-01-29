@@ -11,7 +11,7 @@ CHAR_ST = dt.time(8, 0, 0)  # FIXME Make this data dependent
 CHAR_ST_DELTA = dt.timedelta(hours=8)
 CHARGER_EFF = 0.9  # Global efficiency value
 MARGIN_SOC = 0.1  # Required SOC margin (when not full)
-IS_LEEWAY = dt.timedelta(minutes=60)  # Time for connection
+IS_LEEWAY = dt.timedelta(minutes=60)  # Time for connection how much time you assume the vehicles were charged for
 TURNAROUND = dt.timedelta(minutes=60)  # Min turnaround time
 REF_CONS = 0  # Refrigeration use. Zero if already accounted for.
 TIME_INT = dt.timedelta(minutes=30)
@@ -30,7 +30,7 @@ LEVELS = ['Main', 'Tonext', 'Breach', 'Magic', 'Empty']
 
 STORE_SPEC = {
    457:{
-      'ASC': 500,
+      'ASC': 250,
       'N': 'Pontprennau',
       'zMax': 150
    },

@@ -20,7 +20,8 @@ branch = 457
 vTypes = [['Arrival133', 'Arrival133']]
 vNum = [[0, 16]]
 chargers = [[22]]
-run = 94
+batteries = [[1]]
+run = 22
 notes = 'Creating profiles for MO deck'
 year = 2021
 
@@ -37,7 +38,7 @@ journeys = pickle.load(open(os.path.join(
     gv.JOURNEYS,
     "20-12.WEVC.Multi_Optimisation{}.pkl".format(t)), 'rb'))
 alldates = pd.to_datetime(
-    journeys['Start_Date_of_Route'].unique().astype(str))[50:55]
+    journeys['Start_Date_of_Route'].unique().astype(str))[50:53]
 
 # Get a price table
 pricing_path = os.path.join(
@@ -52,6 +53,7 @@ grid_file_path = os.path.join(gv.LOGS,
 of.create_grid_file(grid_file_path)
 
 for ch in chargers:
+    print("How many chargers")
     for i, vs in enumerate(vTypes):
         script_strt = time.process_time()
         run_dir = os.path.join(gv.LOGS, 'run{}'.format(run))
@@ -62,6 +64,7 @@ for ch in chargers:
                              "20-12.WEVC.Multi_Optimisation{}.pkl".format(t))
         print(t, N, 'vehicles')
         journeys, vDict = pf.prep_data_mixed(jpath, vs, ch, alldates, vNum[i])
+        print(journeys)
         pickle.dump(journeys,
                     open(os.path.join(run_dir, 'journeys.pkl'), 'wb'))
         empty_profs = pf.create_empty_schedule(journeys, price)
@@ -74,13 +77,19 @@ for ch in chargers:
             'opt': capacity['Available_kW'],
             'BAU': capacity['Available_nolim']
         }
-        profile_out, dates, bad_days, lpprob, status = (
+        #print(price)
+        profile_out, dates, bad_days, lpprob, status, bats = (
             lpf.optimise_range3(empty_profs,
-                                ch, site_capacity, vDict))
+                                ch, site_capacity, vDict, batteries))
+
+        print(bats)
+
+        bat = pd.concat(bats)
+        bat.to_pickle('./testnobatlowcap.plk')
         # OUTPUTS
         range_profile, site_profile, days_summary, global_summary = (
             of.summary_outputs(profile_out, journeys,
-                               capacity['Available_kW'], status, vDict))
+                               capacity['Available_kW'], status, vDict, bats))
         # Figures
         range_fig = of.daily_summary_plot(days_summary.fillna(0))
         range_fig.savefig(os.path.join(
@@ -95,6 +104,8 @@ for ch in chargers:
             width=1800, height=1000)
         heatplot.write_html(
             os.path.join(run_dir, "heatplot{}.html".format(run)))
+        
+
 
         # Daily figures
         # for date in dates:

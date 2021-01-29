@@ -392,6 +392,7 @@ def create_empty_schedule(journeys, eprice):
             veh_profile.loc[idx_return, 'Battery_Use'] = -veh_journeys.loc[
                         route, 'Energy_Required']
         veh_profiles_list.append(veh_profile)
+    #print(veh_profiles_list)
     profiles = pd.concat(veh_profiles_list)
     profiles.sort_values(by=['from', 'Vehicle_ID'], inplace=True)
     profiles.set_index(['from', 'Vehicle_ID'], inplace=True)
@@ -406,6 +407,89 @@ def create_empty_schedule(journeys, eprice):
     profiles['Session'] = profiles['Session'] * profiles['Available']
     return profiles
 
+def setup_inputs(journeys, eprice):
+    """Creates a empty schedule for each vehicle in a range
+
+    Includes journey information as availability, energy consumption
+    and electricity price.
+
+    Args:
+        journeys (DataFrame): Contains Start/End time of each route.
+            Also includes next start date and energy req.
+        eprice (DataFrame): electricity price for each time period.
+            Also contains equivalent 'time price' for benchmark.
+
+    Returns:
+        DataFrame: Table of each time period for each vehicle with charge and
+            discharge information
+    """
+    start_date = min(journeys.index.get_level_values('date')).to_pydatetime()
+    start_range = dt.datetime.combine(start_date.date(), gv.CHAR_ST)
+    end_date = max(journeys.index.get_level_values('date')).to_pydatetime()
+    end_range = (dt.datetime.combine(end_date.date(), gv.CHAR_ST)
+                 + dt.timedelta(days=1))
+    time_range = [start_range, end_range]
+    num_days = (end_date.date() - start_date.date()).days
+    # days_profile = {}
+    vehicles = journeys['Vehicle_ID'].unique()
+    veh_profiles_list = []
+    for vehicle in vehicles:
+        veh_profile = create_range_times(time_range, eprice)
+        veh_profile['Vehicle_ID'] = vehicle
+        veh_profile['Available'] = 1
+        veh_profile['Battery_Use'] = 0
+        # Get journeys for that vehicle
+        veh_journeys = journeys[journeys['Vehicle_ID'] == vehicle].droplevel(
+            'date')
+        veh_journeys = veh_journeys.sort_values(by='Start_Time_of_Route')
+
+        for route in veh_journeys.index:
+            # Assign 0 to availability when vehicle is out
+            idx_unav, idx_return = tp_journeys(veh_profile, veh_journeys, route)
+            veh_profile.loc[idx_unav, 'Available'] = 0
+            # Assign energy used when vehicle returns
+            veh_profile.loc[idx_return, 'Battery_Use'] = -veh_journeys.loc[
+                        route, 'Energy_Required']
+        veh_profiles_list.append(veh_profile)
+    print(veh_profiles_list[0].columns)
+    # profiles = pd.concat(veh_profiles_list)
+    # profiles.sort_values(by=['from', 'Vehicle_ID'], inplace=True)
+    # profiles.set_index(['from', 'Vehicle_ID'], inplace=True)
+    # Creates a column to identify a charging session for each vehicle
+    session_num = 0
+    for v in veh_profiles_list:
+        v['Session'] = 0
+        v['Return'] = (v['Battery_Use'] != 0).astype(int)
+        v['Session'] = (session_num + v['Return'].cumsum())
+        session_num = v['Session'].max()
+        v['Session'] = v['Session'] * v['Available']
+    return veh_profiles_list
+
+def create_dailys(profile, day):
+    """Takes a single day from journey data and makes a schedule
+
+    Args:
+        profile (DataFrame): profile for a whole range, all vehicles
+        day (datetime):
+
+    Returns:
+        DataFrame: profile for that day, sorted
+    """
+    start_datetime = day + gv.CHAR_ST_DELTA
+    end_datetime = start_datetime + dt.timedelta(days=1)
+
+    profiles = pd.concat(profile)
+    profiles.sort_values(by=['from', 'Vehicle_ID'], inplace=True)
+    profiles.set_index(['from', 'Vehicle_ID'], inplace=True)
+
+    #print(profiles)
+    
+    day_profile = profiles[(profiles.index.get_level_values(0) < end_datetime)
+                          & (profiles.index.get_level_values(0)
+                              >= start_datetime)]
+
+    return day_profile.sort_index()
+
 
 def create_daily_schedule(profile, day):
     """Takes a single day from journey data and makes a schedule
@@ -419,10 +503,27 @@ def create_daily_schedule(profile, day):
     """
     start_datetime = day + gv.CHAR_ST_DELTA
     end_datetime = start_datetime + dt.timedelta(days=1)
+    
     day_profile = profile[(profile.index.get_level_values(0) < end_datetime)
                           & (profile.index.get_level_values(0)
                               >= start_datetime)]
     return day_profile.sort_index()
+
+def create_daily(profile, day):
+    """Takes a single day from journey data and makes a schedule
+
+    Args:
+        profile (DataFrame): profile for a whole range, all vehicles
+        day (datetime):
+
+    Returns:
+        DataFrame: profile for that day, sorted
+    """
+    start_datetime = day + gv.CHAR_ST_DELTA
+    end_datetime = start_datetime + dt.timedelta(days=1)
+    day_profile = [( p[(p['from'] < end_datetime) & (p['from'] >= start_datetime)]).sort_index().reset_index(drop=True) 
+                    for p in profile]
+    return day_profile
 
 
 def clean_site_capacityJLP(br, year, path):

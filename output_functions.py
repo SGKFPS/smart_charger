@@ -14,7 +14,7 @@ import plotly.io as pio
 import os
 
 
-def summary_outputs(profile, journeys, cap, status, dictV):
+def summary_outputs(profile, journeys, cap, status, dictV, bats):
     """Creates summary columns and dataframes from outputs
 
     Args:
@@ -28,6 +28,14 @@ def summary_outputs(profile, journeys, cap, status, dictV):
         DataFrames: dfs corresponding to overall profile, site
             site aggregation, day summary and global summary.
     """
+
+    battery = pd.DataFrame()
+    bout = []
+    for b in bats:
+        bout.append(b['Output_Opt'].values)
+
+    battery['Output_Opt'] = bout
+    print(battery)
     cols = gv.CAT_COLS
     battery_cap = {k: gv.VSPEC[dictV[k]]['C'] for k in dictV.keys()}
     vehicles = profile.index.get_level_values(1).unique()
@@ -50,6 +58,7 @@ def summary_outputs(profile, journeys, cap, status, dictV):
 
     # Sum all vehicles, per time period
     site = range_profile.groupby(level=0).sum()
+    site['Battery'] = battery['Output_Opt']
     site[cols['PRICE']['opt']] = range_profile[
         cols['PRICE']['opt']].groupby(level=0).mean()
     site.drop(columns=[cols['PRICE']['BAU']], inplace=True)
