@@ -2,6 +2,7 @@
 # Cloned from Phase 1, 26 October 2020
 # Sofia Taylor, Flexible Power Systems
 
+from cvxpy.atoms.elementwise.ceil import ceil, floor
 import numpy as np
 from numpy.core.fromnumeric import shape
 import pandas as pd
@@ -11,6 +12,7 @@ import pickle
 import global_variables as gv
 import random
 import time
+import math
 
 
 def prep_data_limit(path, category):
@@ -459,7 +461,8 @@ def setup_inputs(journeys, eprice):
     session_num = 0
     for v in veh_profiles_list:
         v['Session'] = 0
-        v['Return'] = (v['Battery_Use'] != 0).astype(int)
+        v['Return'] = (v['Battery_Use'].apply(math.floor) != 0).astype(int)
+        print(v['Return'])
         v['Session'] = (session_num + v['Return'].cumsum())
         session_num = v['Session'].max()
         v['Session'] = v['Session'] * v['Available']

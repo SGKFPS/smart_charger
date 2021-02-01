@@ -63,7 +63,7 @@ for ch in chargers:
         #print(t, N, 'vehicles')
         journeysPri, vDict = pf.prep_data_mixed(jpath, vs, ch, alldates, vNum[i])
 
-        vehicle_profs = pf.setup_inputs(journeysPri, price)
+        vehicle_profs = pf.create_empty_schedule(journeysPri, price)
 
         site_capacity = {
             'opt': capacity['Available_kW'],
@@ -71,7 +71,7 @@ for ch in chargers:
         }
 
         profile_out, dates, bad_days, lpprob, status, bats = (
-            lpf.optimise_range(vehicle_profs,
+            lpf.optimise_range3(vehicle_profs,
                                 ch, site_capacity, vDict, batteries))
 
         pd.to_pickle(profile_out, './pulp.plk')

@@ -48,17 +48,17 @@ def optimise_range(empty_profile, charger, capacity,
         data=[0]*nVeh,
         index=vehiclelist
     )
-    print(initial_rel_charge)
+    # print(initial_rel_charge)
     rel_charge = dict.fromkeys(gv.CATS, initial_rel_charge)
     req_energy = [e.groupby('date').sum()[['Battery_Use']]*(1+gv.MARGIN_SOC) for e in empty_profile]
-
+    # print(req_energy)
     last_day = pd.Timestamp(dates[-1]).to_pydatetime()+dt.timedelta(days=1)
 
     for req, v in zip(req_energy, vehiclelist):
         req.loc[last_day, 'Battery_Use'] = 0
         req['Full_Use'] = -1 * battery_cap[v]
         req['Req_Battery'] = req[['Battery_Use', 'Full_Use']].max(axis=1)
-
+    # print(req_energy)
 
     level_optimiser = []
     bat_out = []
@@ -165,6 +165,7 @@ def linear_optimiser_V7(profile, ca, charger1, charger2,
     output_col = gv.CAT_COLS['OUTPUT'][ca]
     ch_col = gv.CAT_COLS['CH_TYPE'][ca]
     
+    #print([v['Return'] for v in profile])
     
     sessions = [list(p['Session'].unique()) for p in profile]
     sessions = [x for sublist in sessions for x in sublist]
@@ -206,7 +207,7 @@ def linear_optimiser_V7(profile, ca, charger1, charger2,
         times = list(profile[vehicle].loc[profile[vehicle]['Available'] == 1].index)
         #print(times)
         constraints.append(cp.sum([outputs[i, vehicle] * gv.CHARGER_EFF for i in times])
-                            == (- profile[vehicle]['Battery_Use'].sum() + rel_charge[vehicles[vehicle]]))
+                            == -1* ( profile[vehicle]['Battery_Use'].sum() + rel_charge[vehicles[vehicle]]))
 
     #print(True in constraints)
     #print(vehicles)
@@ -216,19 +217,20 @@ def linear_optimiser_V7(profile, ca, charger1, charger2,
             cumul_use = profile[vehicle].loc[:period,'Battery_Use'].sum() # cummulative up to that point
             temp = profile[vehicle].iloc[:period]
             cumul_profile = list(temp.loc[temp['Available'] == 1].index) # up to that point
-            constraints.append(sum(cp.sum(  # Doesn't go over 100% SOC
+            constraints.append(cp.sum(  # Doesn't go over 100% SOC
                 [outputs[i, vehicle] * gv.CHARGER_EFF
                     for i in cumul_profile]
-            ) + cumul_use + rel_charge[vehicles[vehicle]]) <= 0.00001)
+            ) + cumul_use + rel_charge[vehicles[vehicle]] <= cp.Constant(0.00001))
         # Make sure it doesn't go below 0% SOC at every return
         returns = list(profile[vehicle].loc[profile[vehicle]['Return'] == 1].index)
+        #print(profile[vehicle].loc[returns])
         for period in returns:
             cumul_use = profile[vehicle].loc[:period,'Battery_Use'].sum() # cummulative up to that point
-            temp = profile[vehicle].loc[:period]
+            temp = profile[vehicle].iloc[:period]
             cumul_profile = list(temp.loc[temp['Available'] == 1].index) # up to that point
-            constraints.append(sum(cp.sum(  # Doesn't go below 0% SOC
+            constraints.append(cp.sum(  # Doesn't go below 0% SOC
                 [outputs[i, vehicle] * gv.CHARGER_EFF for i in cumul_profile]
-            ) + cumul_use + rel_charge[vehicles[vehicle]] + battery_cap[vehicles[vehicle]]) >= 0)
+            ) + cumul_use + rel_charge[vehicles[vehicle]] + battery_cap[vehicles[vehicle]] >= cp.Constant(0))
     
     #print(True in constraints)
 
@@ -250,12 +252,12 @@ def linear_optimiser_V7(profile, ca, charger1, charger2,
     #print(outputs)
 
 
-    objective = cp.Minimize(cp.sum((sum(cp.multiply(outputs, all_prices)) + sum(cp.multiply(battery, prices))) ) )
+    objective = cp.Minimize(cp.sum(cp.multiply(outputs, all_prices)))
     
     problem = cp.Problem(objective, constraints)
 
     # Solve and print to the screen
-    problem.solve(solver=cp.GLPK_MI)
+    problem.solve(solver=cp.CBC)
 
     #print(problem.status)
     #print(ca, "status:", LpStatus[prob.status])
@@ -364,6 +366,7 @@ def optimise_range3(empty_profile, charger, capacity,
     req_energy['Req_Battery'] = req_energy[[
         'Battery_Use', 'Full_Use']].max(
         axis=1)
+    print(req_energy)
     level_optimiser = []
     bat_out = []
     for date in dates:
@@ -915,6 +918,7 @@ def linear_optimiser_V6(profile, ca, charger1, charger2,
     """
     #print(profile)
     vehicles = profile.index.get_level_values(1).unique()
+    #print(profile.loc[profile['Return'] == 1])
     
     profile_av = profile[profile['Available'] == 1]
     time_periods = profile_av.index.get_level_values(0).unique()
@@ -927,12 +931,12 @@ def linear_optimiser_V6(profile, ca, charger1, charger2,
     
     
     sessions = profile['Session'].unique()
-    print(sessions)
+    # print(sessions)
     #print(sessions)
     # Define output variable
     outputs = LpVariable.dicts(
         "output",
-        ((period, vehicle) for period, vehicle in profile_av.index),
+        ((period, vehicle) for period, vehicle in profile.index),
         lowBound=0,
         upBound=charger2 * gv.TIME_FRACT,
         cat="Continuous")
@@ -1040,7 +1044,7 @@ def linear_optimiser_V6(profile, ca, charger1, charger2,
             if prob.status == 1:
                 x = outputs[(period, vehicle)].varValue
                 y = ch_assignment[
-                    profile_av.loc[(period, vehicle), 'Session']].varValue
+                    profile.loc[(period, vehicle), 'Session']].varValue
             else:
                 x = 0
             var_output = {
