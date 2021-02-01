@@ -234,10 +234,10 @@ def linear_optimiser_V7(profile, ca, charger1, charger2,
     
     #print(True in constraints)
 
-    for idx in range(len(time_periods)):
+    for idx, time in enumerate(time_periods):
         constraints.append( cp.sum(  # limits the overall site capacity
             outputs[idx, :] + battery[idx]) <= (
-                capacity.iloc[idx] * gv.TIME_FRACT))
+                capacity.loc[time] * gv.TIME_FRACT))
         constraints.append( cp.sum(  # limits the number of fast chargers
             [ch_assignment[
                 sessions.index(profile[v-1].loc[idx, 'Session'])] for v in vehicles ]) <= gv.NUM_FAST_CH)
